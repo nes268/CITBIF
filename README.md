@@ -291,14 +291,7 @@ VITE_API_URL=http://localhost:5000
 
 This project is licensed under the ISC License.
 
-## 👥 Authors
 
-- **Keerthana R** - [GitHub](https://github.com/Keerthana-R786)
-
-## 🙏 Acknowledgments
-
-- Chennai Institute of Technology Business Incubation Foundation (CITBIF)
-- All contributors and mentors
 
 ## 📞 Support
 
