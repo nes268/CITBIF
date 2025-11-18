@@ -47,6 +47,7 @@ const Review: React.FC = () => {
   }, [refreshApplications]);
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
   const [processingStartupId, setProcessingStartupId] = useState<string | null>(null);
+  const [processingAction, setProcessingAction] = useState<'approve' | 'reject' | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [showErrorMessage, setShowErrorMessage] = useState(false);
   const [message, setMessage] = useState('');
@@ -64,6 +65,7 @@ const Review: React.FC = () => {
 
   const handleApprove = async (startupId: string) => {
     setProcessingStartupId(startupId);
+    setProcessingAction('approve');
     try {
       // Find the startup to get its details before approval
       const startup = startups.find(s => s.id === startupId);
@@ -97,6 +99,7 @@ const Review: React.FC = () => {
       setTimeout(() => setShowErrorMessage(false), 3000);
     } finally {
       setProcessingStartupId(null);
+      setProcessingAction(null);
     }
   };
 
@@ -106,6 +109,7 @@ const Review: React.FC = () => {
     }
     
     setProcessingStartupId(startupId);
+    setProcessingAction('reject');
     try {
       // Update application status using context (this calls the backend API)
       await rejectApplication(startupId);
@@ -124,6 +128,7 @@ const Review: React.FC = () => {
       setTimeout(() => setShowErrorMessage(false), 3000);
     } finally {
       setProcessingStartupId(null);
+      setProcessingAction(null);
     }
   };
 
@@ -236,53 +241,42 @@ const Review: React.FC = () => {
             </div>
 
             {/* Actions Sidebar */}
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Review Actions</h3>
-                <div className="space-y-3">
-                  <Button 
-                    variant="primary" 
-                    className={`w-full flex items-center space-x-2 ${
-                      selectedStartup.status === 'approved' 
-                        ? 'bg-green-600 cursor-not-allowed' 
-                        : 'bg-green-600 hover:bg-green-700'
-                    }`}
-                    onClick={() => handleApprove(selectedStartup.id)}
-                    disabled={processingStartupId === selectedStartup.id || selectedStartup.status !== 'pending'}
-                  >
-                    {processingStartupId === selectedStartup.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Check className="h-4 w-4" />
-                    )}
-                    <span>
-                      {selectedStartup.status === 'approved' ? 'Approved' : 'Approve Application'}
-                    </span>
-                  </Button>
-                  
-                  <Button 
-                    variant="danger" 
-                    className={`w-full flex items-center space-x-2 ${
-                      selectedStartup.status === 'rejected' 
-                        ? 'bg-red-600 cursor-not-allowed' 
-                        : 'bg-red-600 hover:bg-red-700'
-                    }`}
-                    onClick={() => handleReject(selectedStartup.id)}
-                    disabled={processingStartupId === selectedStartup.id || selectedStartup.status !== 'pending'}
-                  >
-                    {processingStartupId === selectedStartup.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <X className="h-4 w-4" />
-                    )}
-                    <span>
-                      {selectedStartup.status === 'rejected' ? 'Rejected' : 'Reject Application'}
-                    </span>
-                  </Button>
+            {selectedStartup.status === 'pending' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4">Review Actions</h3>
+                  <div className="space-y-3">
+                    <Button 
+                      variant="primary" 
+                      className="w-full flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleApprove(selectedStartup.id)}
+                      disabled={processingStartupId === selectedStartup.id}
+                    >
+                      {processingStartupId === selectedStartup.id && processingAction === 'approve' ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                      <span>Approve Application</span>
+                    </Button>
+                    
+                    <Button 
+                      variant="danger" 
+                      className="w-full flex items-center space-x-2 bg-red-600 hover:bg-red-700"
+                      onClick={() => handleReject(selectedStartup.id)}
+                      disabled={processingStartupId === selectedStartup.id}
+                    >
+                      {processingStartupId === selectedStartup.id && processingAction === 'reject' ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                      <span>Reject Application</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
-
-            </div>
+            )}
           </div>
         </Card>
       </div>
@@ -431,40 +425,36 @@ const Review: React.FC = () => {
                   <Eye className="h-4 w-4 mr-1" />
                   Review
                 </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => handleApprove(startup.id)}
-                  className={`${
-                    startup.status === 'approved' 
-                      ? 'text-green-400 bg-green-900/20 cursor-not-allowed' 
-                      : 'text-green-400 hover:bg-green-900/20'
-                  }`}
-                  disabled={processingStartupId === startup.id || startup.status !== 'pending'}
-                >
-                  {processingStartupId === startup.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => handleReject(startup.id)}
-                  className={`${
-                    startup.status === 'rejected' 
-                      ? 'text-red-400 bg-red-900/20 cursor-not-allowed' 
-                      : 'text-red-400 hover:bg-red-900/20'
-                  }`}
-                  disabled={processingStartupId === startup.id || startup.status !== 'pending'}
-                >
-                  {processingStartupId === startup.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <X className="h-4 w-4" />
-                  )}
-                </Button>
+                {startup.status === 'pending' && (
+                  <>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleApprove(startup.id)}
+                      className="text-green-400 hover:bg-green-900/20"
+                      disabled={processingStartupId === startup.id}
+                    >
+                      {processingStartupId === startup.id && processingAction === 'approve' ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleReject(startup.id)}
+                      className="text-red-400 hover:bg-red-900/20"
+                      disabled={processingStartupId === startup.id}
+                    >
+                      {processingStartupId === startup.id && processingAction === 'reject' ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </Card>

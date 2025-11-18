@@ -11,6 +11,7 @@ import {
   AlertTriangle, 
   Bell,
   BarChart3,
+  PieChart,
   Search,
   X,
   Eye,
@@ -98,17 +99,39 @@ const AdminOverview: React.FC = () => {
 
   const stages = ['Incubation', 'Innovation'];
 
-  // Calculate TRL distribution
-  const trlData = useMemo(() => {
-    const trl1to3 = startups.filter(s => s.trlLevel >= 1 && s.trlLevel <= 3).length;
-    const trl4to6 = startups.filter(s => s.trlLevel >= 4 && s.trlLevel <= 6).length;
-    const trl7to9 = startups.filter(s => s.trlLevel >= 7 && s.trlLevel <= 9).length;
+  // Calculate sector distribution for all startups
+  const sectorData = useMemo(() => {
+    const sectorCounts: Record<string, number> = {};
+    
+    startups.forEach(startup => {
+      const sector = startup.sector || 'Other';
+      sectorCounts[sector] = (sectorCounts[sector] || 0) + 1;
+    });
 
-    return [
-      { level: 'TRL 1-3', count: trl1to3, color: 'bg-gradient-to-t from-purple-600 to-purple-500', hexColor: '#8b5cf6', description: 'Basic Research' },
-      { level: 'TRL 4-6', count: trl4to6, color: 'bg-gradient-to-t from-cyan-600 to-cyan-500', hexColor: '#06b6d4', description: 'Technology Development' },
-      { level: 'TRL 7-9', count: trl7to9, color: 'bg-gradient-to-t from-emerald-600 to-emerald-500', hexColor: '#10b981', description: 'System Demo & Deployment' },
+    // Professional color palette for pie chart
+    const colors = [
+      { hex: '#8b5cf6', name: 'purple' }, // Purple
+      { hex: '#06b6d4', name: 'cyan' }, // Cyan
+      { hex: '#10b981', name: 'emerald' }, // Emerald
+      { hex: '#f59e0b', name: 'amber' }, // Amber
+      { hex: '#ef4444', name: 'red' }, // Red
+      { hex: '#3b82f6', name: 'blue' }, // Blue
+      { hex: '#ec4899', name: 'pink' }, // Pink
+      { hex: '#14b8a6', name: 'teal' }, // Teal
+      { hex: '#f97316', name: 'orange' }, // Orange
+      { hex: '#6366f1', name: 'indigo' }, // Indigo
     ];
+
+    const sortedSectors = Object.entries(sectorCounts)
+      .map(([sector, count], index) => ({
+        sector,
+        count,
+        color: colors[index % colors.length].hex,
+        colorName: colors[index % colors.length].name,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    return sortedSectors;
   }, [startups]);
 
   const handleApproveStartup = async (startupId: string) => {
@@ -224,7 +247,29 @@ const AdminOverview: React.FC = () => {
   const notifications = getRecentNotifications(5);
   const unreadCount = getUnreadCount();
 
-  const maxCount = Math.max(...trlData.map(d => d.count), 1);
+  // Calculate pie chart data - total startups across all sectors
+  const totalStartups = sectorData.reduce((sum, d) => sum + d.count, 0);
+  
+  // Helper function to create pie chart path (full pie chart)
+  const createPieSlice = (startAngle: number, endAngle: number, centerX: number, centerY: number, radius: number) => {
+    // Convert angles to radians
+    const startRad = ((startAngle - 90) * Math.PI) / 180;
+    const endRad = ((endAngle - 90) * Math.PI) / 180;
+    
+    // Calculate arc end points
+    const startX = centerX + radius * Math.cos(startRad);
+    const startY = centerY + radius * Math.sin(startRad);
+    const endX = centerX + radius * Math.cos(endRad);
+    const endY = centerY + radius * Math.sin(endRad);
+    
+    // Determine if we need large arc flag (for angles > 180 degrees)
+    const angleDiff = endAngle - startAngle;
+    const largeArcFlag = angleDiff > 180 ? 1 : 0;
+    
+    // Build the path for pie slice
+    // Start from center, draw line to start point, arc to end point, close path back to center
+    return `M ${centerX} ${centerY} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
+  };
 
   if (loading) {
     return (
@@ -304,66 +349,113 @@ const AdminOverview: React.FC = () => {
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* TRL Distribution Bar Chart */}
+        {/* Sector Distribution Pie Chart */}
         <Card className="p-6 h-full flex flex-col">
           <h2 className="text-xl font-semibold text-white mb-6 flex items-center">
-            <BarChart3 className="h-5 w-5 mr-2" />
-            TRL Level Distribution
+            <PieChart className="h-5 w-5 mr-2" />
+            Sector Distribution
           </h2>
           
-          {/* Bar Chart Container - Takes remaining space */}
-          <div className="relative flex-1 flex flex-col">
-            {/* Y-axis Labels */}
-            <div className="absolute left-2 top-0 h-64 flex flex-col justify-between py-4">
-              {[maxCount, Math.round(maxCount * 0.75), Math.round(maxCount * 0.5), Math.round(maxCount * 0.25), 0].map((value, index) => (
-                <div key={index} className="text-xs text-gray-400 text-right w-8">
-                  {value}
+          {/* Pie Chart Container */}
+          <div className="relative flex-1 flex flex-col items-center justify-center">
+            {totalStartups === 0 ? (
+              <div className="text-center py-12">
+                <PieChart className="h-16 w-16 text-gray-400 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-gray-300 mb-2">No startups</h3>
+                <p className="text-gray-400">Startup data will appear here</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center w-full">
+                {/* Pie Chart SVG */}
+                <div className="relative mb-6">
+                  <svg width="280" height="280" viewBox="0 0 280 280" className="drop-shadow-lg">
+                    {sectorData.reduce((acc, item, index) => {
+                      // Calculate percentage accurately
+                      const percentage = totalStartups > 0 ? (item.count / totalStartups) * 100 : 0;
+                      
+                      // Calculate angles based on percentage (ensuring they add up to 360)
+                      const startAngle = acc.currentAngle;
+                      // For the last slice, ensure it closes the circle exactly at 360
+                      const isLastSlice = index === sectorData.length - 1;
+                      const endAngle = isLastSlice ? 360 : startAngle + (percentage / 100) * 360;
+                      
+                      // Center of the SVG (viewBox is 0 0 280 280, so center is 140, 140)
+                      const centerX = 140;
+                      const centerY = 140;
+                      const radius = 110; // Radius of the pie chart
+                      
+                      // Calculate midpoint angle for label positioning
+                      const midAngle = percentage === 100 ? 0 : (startAngle + endAngle) / 2;
+                      const midAngleRad = ((midAngle - 90) * Math.PI) / 180;
+                      const labelRadius = 70; // Distance from center for labels (positioned in the middle of the slice)
+                      const labelX = centerX + labelRadius * Math.cos(midAngleRad);
+                      const labelY = centerY + labelRadius * Math.sin(midAngleRad);
+                      
+                      const slice = (
+                        <g key={index} className="group cursor-pointer">
+                          <path
+                            d={createPieSlice(startAngle, endAngle, centerX, centerY, radius)}
+                            fill={item.color}
+                            stroke="#0f172a"
+                            strokeWidth="2"
+                            className="transition-all duration-300 group-hover:opacity-90 group-hover:brightness-110"
+                            style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+                          />
+                          {/* Percentage label on slice - show if slice is large enough or if it's the only slice */}
+                          {(percentage > 3 || sectorData.length === 1) && (
+                            <text
+                              x={labelX}
+                              y={labelY}
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              className="text-white text-sm font-bold fill-white"
+                              style={{ 
+                                textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5)',
+                                pointerEvents: 'none'
+                              }}
+                            >
+                              {percentage.toFixed(1)}%
+                            </text>
+                          )}
+                        </g>
+                      );
+                      
+                      acc.slices.push(slice);
+                      acc.currentAngle = endAngle;
+                      return acc;
+                    }, { slices: [] as JSX.Element[], currentAngle: 0 }).slices}
+                  </svg>
                 </div>
-              ))}
-            </div>
-            
-            {/* Chart Area - Flexible height */}
-            <div className="flex items-end justify-between gap-2 h-64 pl-12 pr-4 pb-16 border-b border-gray-700">
-              {trlData.map((item, index) => (
-                <div key={index} className="flex flex-col items-center flex-1">
-                  {/* Bar */}
-                  <div 
-                    className={`w-full max-w-16 ${item.color} rounded-t-lg transition-all duration-500 hover:opacity-80 relative group`}
-                    style={{ height: maxCount > 0 ? `${(item.count / maxCount) * 200}px` : '0px', minHeight: item.count > 0 ? '4px' : '0px' }}
-                  >
-                    {/* Enhanced Hover tooltip */}
-                    <div className="absolute -top-32 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-3 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity z-10 min-w-48 shadow-lg border border-gray-600">
-                      <div className="text-center">
-                        <div className="font-semibold text-white mb-2">{item.level}</div>
-                        <div className="text-2xl font-bold text-cyan-400 mb-1">{item.count}</div>
-                        <div className="text-xs text-gray-300 mb-2">startups</div>
-                        <div className="text-xs text-gray-400 border-t border-gray-600 pt-2">
-                          {item.description}
+                
+                {/* Legend */}
+                <div className="w-full max-w-md">
+                  <div className="grid grid-cols-2 gap-3">
+                    {sectorData.map((item, index) => {
+                      const percentage = ((item.count / totalStartups) * 100).toFixed(1);
+                      return (
+                        <div 
+                          key={index} 
+                          className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700/30 transition-colors group"
+                        >
+                          <div 
+                            className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-gray-300 font-medium truncate group-hover:text-white transition-colors">
+                              {item.sector}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {item.count} ({percentage}%)
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {(() => {
-                            const total = trlData.reduce((sum, d) => sum + d.count, 0);
-                            return total > 0 ? `${((item.count / total) * 100).toFixed(1)}% of total` : '0% of total';
-                          })()}
-                        </div>
-                      </div>
-                      {/* Tooltip arrow */}
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
-            
-            {/* X-axis Labels */}
-            <div className="flex justify-between gap-2 pl-12 pr-4 mt-3">
-              {trlData.map((item, index) => (
-                <div key={index} className="flex flex-col items-center flex-1">
-                  <span className="text-gray-300 font-medium text-xs">{item.level}</span>
-                  <span className="text-gray-400 text-xs mt-1 text-center leading-tight">{item.description}</span>
-                </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         </Card>
 
