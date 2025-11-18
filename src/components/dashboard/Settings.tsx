@@ -2,17 +2,20 @@ import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
-import { Settings as SettingsIcon, Save, User, Target, CheckCircle, Clock } from 'lucide-react';
+import { Settings as SettingsIcon, Save, User, Target, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { profileApi } from '../../services/profileApi';
 import { useStartups } from '../../hooks/useStartups';
 import { startupsApi } from '../../services/startupsApi';
 
 const Settings: React.FC = () => {
   const { user } = useAuth();
-  const { updateStartupPhase } = useStartups();
+  const { updateStartupPhase, updateStartup } = useStartups();
   const [isSaving, setIsSaving] = useState(false);
   const [savingPhase, setSavingPhase] = useState(false);
   const [phaseSaved, setPhaseSaved] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<'active' | 'dropout'>('active');
+  const [startupId, setStartupId] = useState<string | null>(null);
   const [settings, setSettings] = useState({
     maintenanceMode: false,
     autoApproveApplications: false,
@@ -62,11 +65,20 @@ const Settings: React.FC = () => {
             });
           }
 
-          // Fetch startup phase
+          // Fetch startup phase and status
           try {
             const startups = await startupsApi.getStartups(user.id);
-            if (startups.length > 0 && startups[0].startupPhase) {
-              setStartupPhase(startups[0].startupPhase);
+            if (startups.length > 0) {
+              const startup = startups[0];
+              if (startup.startupPhase) {
+                setStartupPhase(startup.startupPhase);
+              }
+              if (startup.id) {
+                setStartupId(startup.id);
+              }
+              // Set current status - normalize to 'active' or 'dropout'
+              const status = startup.status === 'dropout' ? 'dropout' : 'active';
+              setCurrentStatus(status);
             }
           } catch (error) {
             console.error('Error fetching startup phase:', error);
@@ -148,6 +160,34 @@ const Settings: React.FC = () => {
       alert('Failed to update startup phase. Please try again.');
     } finally {
       setSavingPhase(false);
+    }
+  };
+
+  const handleDropout = async () => {
+    if (!startupId) {
+      alert('Startup information not found. Please refresh the page.');
+      return;
+    }
+
+    const confirmMessage = currentStatus === 'dropout' 
+      ? 'Are you sure you want to reactivate your startup? This will change your status back to active.'
+      : 'Are you sure you want to mark your startup as dropout? This action will change your status to dropout.';
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setUpdatingStatus(true);
+    try {
+      const newStatus = currentStatus === 'dropout' ? 'active' : 'dropout';
+      await updateStartup(startupId, { status: newStatus });
+      setCurrentStatus(newStatus);
+      alert(`Your startup status has been updated to ${newStatus}.`);
+    } catch (error) {
+      console.error('Error updating startup status:', error);
+      alert('Failed to update startup status. Please try again.');
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -261,7 +301,7 @@ const Settings: React.FC = () => {
       {/* Two Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Personal Details */}
-        <Card className="p-6">
+        <Card className="p-6 h-full">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
               <User className="h-5 w-5 text-cyan-400" />
@@ -335,58 +375,112 @@ const Settings: React.FC = () => {
           </div>
         </Card>
 
-        {/* Startup Phase */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <Target className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-xl font-semibold text-white">Startup Phase</h2>
-            </div>
-            {phaseSaved && (
-              <div className="flex items-center space-x-2 text-emerald-400">
-                <CheckCircle className="h-5 w-5" />
-                <span className="text-sm">Saved!</span>
+        {/* Right Column - Startup Phase and Status */}
+        <div className="flex flex-col h-full gap-6">
+          {/* Startup Phase */}
+          <Card className="p-6 flex-shrink-0">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Target className="h-5 w-5 text-cyan-400" />
+                <h2 className="text-xl font-semibold text-white">Startup Phase</h2>
               </div>
-            )}
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Current Phase *</label>
-              <select
-                value={startupPhase}
-                onChange={(e) => setStartupPhase(e.target.value as typeof startupPhase)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              >
-                {phaseOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-gray-700">
-            <Button
-              onClick={handlePhaseChange}
-              disabled={savingPhase}
-              className="w-full"
-            >
-              {savingPhase ? (
-                <>
-                  <Clock className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Phase
-                </>
+              {phaseSaved && (
+                <div className="flex items-center space-x-2 text-emerald-400">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="text-sm">Saved!</span>
+                </div>
               )}
-            </Button>
-          </div>
-        </Card>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Current Phase *</label>
+                <select
+                  value={startupPhase}
+                  onChange={(e) => setStartupPhase(e.target.value as typeof startupPhase)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                >
+                  {phaseOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-700">
+              <Button
+                onClick={handlePhaseChange}
+                disabled={savingPhase}
+                className="w-full"
+              >
+                {savingPhase ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Phase
+                  </>
+                )}
+              </Button>
+            </div>
+          </Card>
+
+          {/* Startup Status */}
+          <Card className="p-6 flex-1 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-cyan-400" />
+                <h2 className="text-xl font-semibold text-white">Startup Status</h2>
+              </div>
+              <span className={`text-xs px-3 py-1 rounded-full capitalize ${
+                currentStatus === 'active' 
+                  ? 'bg-green-900/30 text-green-400' 
+                  : 'bg-red-900/30 text-red-400'
+              }`}>
+                {currentStatus}
+              </span>
+            </div>
+            
+            <div className="space-y-4 flex-1 flex flex-col justify-between">
+              <div>
+                <p className="text-sm text-gray-400 mb-4">
+                  {currentStatus === 'active' 
+                    ? 'Your startup is currently active. You can mark it as dropout if you wish to discontinue.'
+                    : 'Your startup is marked as dropout. You can reactivate it if needed.'}
+                </p>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-700">
+                <Button
+                  onClick={handleDropout}
+                  disabled={updatingStatus || !startupId}
+                  className={`w-full ${
+                    currentStatus === 'dropout' 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {updatingStatus ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      {currentStatus === 'dropout' ? 'Reactivate Startup' : 'Mark as Dropout'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -145,6 +145,8 @@ const Review: React.FC = () => {
     return type === 'incubation' ? 'bg-blue-900/30 text-blue-400' : 'bg-purple-900/30 text-purple-400';
   };
 
+  // Review page shows actual status from database: 'approved', 'rejected', or 'pending'
+  // This is different from other pages which normalize to 'active' or 'dropout'
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':

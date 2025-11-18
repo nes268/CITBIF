@@ -53,12 +53,15 @@ const AdminOverview: React.FC = () => {
   const [hoveredSector, setHoveredSector] = useState<{ sector: string; percentage: number; count: number } | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
-  // Calculate metrics from real data
+  // Calculate metrics from real data - only count approved/active startups
   const metrics = useMemo(() => {
-    const total = startups.length;
-    const incubation = startups.filter(s => s.type === 'incubation').length;
-    const innovation = startups.filter(s => s.type === 'innovation').length;
-    const dropout = startups.filter(s => s.status === 'dropout').length;
+    // Filter out pending and rejected startups
+    // Include: 'approved', 'active', 'completed', 'dropout'
+    const approvedStartups = startups.filter(s => s.status !== 'pending' && s.status !== 'rejected');
+    const total = approvedStartups.length;
+    const incubation = approvedStartups.filter(s => s.type === 'incubation').length;
+    const innovation = approvedStartups.filter(s => s.type === 'innovation').length;
+    const dropout = approvedStartups.filter(s => s.status === 'dropout').length;
     const pending = startups.filter(s => s.status === 'pending').length;
 
     return [
@@ -101,11 +104,15 @@ const AdminOverview: React.FC = () => {
 
   const stages = ['Incubation', 'Innovation'];
 
-  // Calculate sector distribution for all startups
+  // Calculate sector distribution for approved/active startups only
   const sectorData = useMemo(() => {
     const sectorCounts: Record<string, number> = {};
     
-    startups.forEach(startup => {
+    // Only count approved/active startups - exclude pending and rejected
+    // Include: 'approved', 'active', 'completed', 'dropout'
+    const approvedStartups = startups.filter(s => s.status !== 'pending' && s.status !== 'rejected');
+    
+    approvedStartups.forEach(startup => {
       const sector = startup.sector || 'Other';
       sectorCounts[sector] = (sectorCounts[sector] || 0) + 1;
     });
@@ -174,15 +181,22 @@ const AdminOverview: React.FC = () => {
   };
 
   const getFilteredStartups = (): Startup[] => {
-    let filtered = [...startups];
+    // Only show approved/active startups - exclude pending and rejected (except when viewing pending metric)
+    // Include: 'approved', 'active', 'completed', 'dropout'
+    let filtered = startups.filter(s => {
+      if (selectedMetric === 'pending') {
+        // Show pending startups only when viewing pending metric
+        return s.status === 'pending';
+      }
+      // For all other views, exclude pending and rejected
+      return s.status !== 'pending' && s.status !== 'rejected';
+    });
 
     // Filter by metric type
     if (selectedMetric === 'incubation') {
       filtered = filtered.filter(startup => startup.type === 'incubation');
     } else if (selectedMetric === 'innovation') {
       filtered = filtered.filter(startup => startup.type === 'innovation');
-    } else if (selectedMetric === 'pending') {
-      filtered = filtered.filter(startup => startup.status === 'pending');
     }
 
     // Apply search filter
@@ -219,13 +233,15 @@ const AdminOverview: React.FC = () => {
   };
 
   const getStatusBadge = (status: Startup['status']) => {
+    // Normalize status for display: approved/active/completed -> active, dropout -> dropout
+    // This is for overview page (not review page)
+    const normalizedStatus = status === 'dropout' ? 'dropout' : 'active';
+    
     const statusConfig = {
-      pending: { bg: 'bg-yellow-900/30', text: 'text-yellow-400', label: 'Pending' },
       active: { bg: 'bg-green-900/30', text: 'text-green-400', label: 'Active' },
-      completed: { bg: 'bg-blue-900/30', text: 'text-blue-400', label: 'Completed' },
       dropout: { bg: 'bg-red-900/30', text: 'text-red-400', label: 'Dropout' }
     };
-    const config = statusConfig[status] || statusConfig.pending;
+    const config = statusConfig[normalizedStatus] || statusConfig.active;
     return (
       <span className={`px-2 py-1 rounded-full text-xs ${config.bg} ${config.text}`}>
         {config.label}

@@ -117,6 +117,11 @@ const AdminDataRoom: React.FC = () => {
   };
 
   const filteredStartups = startups.filter(startup => {
+    // Exclude rejected startups from dataroom
+    if (startup.status === 'rejected') {
+      return false;
+    }
+    
     const matchesSearch = 
       startup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       startup.founder.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -445,14 +450,19 @@ const AdminDataRoom: React.FC = () => {
                       <p className="text-sm text-gray-400 truncate">{startup.founder}</p>
                       <p className="text-xs text-gray-500 truncate mt-1">{startup.email}</p>
                       <div className="flex items-center space-x-2 mt-2">
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          startup.status === 'active' ? 'bg-green-900/30 text-green-400' :
-                          startup.status === 'completed' ? 'bg-blue-900/30 text-blue-400' :
-                          startup.status === 'dropout' ? 'bg-red-900/30 text-red-400' :
-                          'bg-yellow-900/30 text-yellow-400'
-                        }`}>
-                          {startup.status}
-                        </span>
+                        {(() => {
+                          // Normalize status: approved/active/completed -> active, dropout -> dropout
+                          const displayStatus = startup.status === 'dropout' ? 'dropout' : 'active';
+                          return (
+                            <span className={`text-xs px-2 py-1 rounded capitalize ${
+                              displayStatus === 'active' ? 'bg-green-900/30 text-green-400' :
+                              displayStatus === 'dropout' ? 'bg-red-900/30 text-red-400' :
+                              'bg-gray-900/30 text-gray-400'
+                            }`}>
+                              {displayStatus}
+                            </span>
+                          );
+                        })()}
                         <span className="text-xs text-gray-500">{startup.sector}</span>
                         {docCount > 0 && (
                           <span className="text-xs px-2 py-1 rounded bg-cyan-900/30 text-cyan-400 flex items-center gap-1">

@@ -34,6 +34,13 @@ const StartupManage: React.FC = () => {
     : defaultSectors;
 
   const filteredStartups = startups.filter(startup => {
+    // Only show approved/active startups - exclude pending and rejected
+    // Approved startups should appear in startups page after approval
+    if (startup.status === 'pending' || startup.status === 'rejected') {
+      return false;
+    }
+    // Include: 'approved', 'active', 'completed', 'dropout' (dropout will be normalized to show as dropout)
+    
     const matchesSearch = 
       startup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       startup.founder.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,22 +56,32 @@ const StartupManage: React.FC = () => {
     return matchesSearch && matchesSector && matchesType && matchesTRL;
   });
 
+  const normalizeStatus = (status: string): 'active' | 'dropout' => {
+    // Normalize status for display: approved/active/completed -> active, dropout -> dropout
+    // This is for startups page, dataroom, and overview pages
+    return status === 'dropout' ? 'dropout' : 'active';
+  };
+
   const getMetrics = () => {
+    // Only count approved/active startups - exclude pending and rejected
+    // Include: 'approved', 'active', 'completed', 'dropout'
+    const approvedStartups = startups.filter(s => s.status !== 'pending' && s.status !== 'rejected');
+    const activeCount = approvedStartups.filter(s => normalizeStatus(s.status) === 'active').length;
+    
     return {
-      total: startups.length,
-      active: startups.filter(s => s.status === 'active').length,
-      innovation: startups.filter(s => s.type === 'innovation').length,
-      incubation: startups.filter(s => s.type === 'incubation').length
+      total: approvedStartups.length,
+      active: activeCount,
+      innovation: approvedStartups.filter(s => s.type === 'innovation').length,
+      incubation: approvedStartups.filter(s => s.type === 'incubation').length
     };
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const normalizedStatus = normalizeStatus(status);
+    switch (normalizedStatus) {
       case 'active': return 'bg-green-900/30 text-green-400';
-      case 'completed': return 'bg-blue-900/30 text-blue-400';
       case 'dropout': return 'bg-red-900/30 text-red-400';
-      case 'pending': return 'bg-yellow-900/30 text-yellow-400';
-      default: return 'bg-gray-700 text-gray-300';
+      default: return 'bg-green-900/30 text-green-400';
     }
   };
 
@@ -85,8 +102,29 @@ const StartupManage: React.FC = () => {
     setProfileError(null);
     setSelectedProfile(null);
 
-    // Check if userId exists and is valid
-    if (!startup.userId || startup.userId === 'null' || startup.userId === 'undefined' || startup.userId.trim() === '') {
+    // Extract userId - handle both string and populated object cases
+    let userId: string | null = null;
+    
+    if (startup.userId) {
+      if (typeof startup.userId === 'string') {
+        // If it's a string, check if it's valid
+        const trimmed = startup.userId.trim();
+        if (trimmed && trimmed !== 'null' && trimmed !== 'undefined') {
+          userId = trimmed;
+        }
+      } else if (typeof startup.userId === 'object' && startup.userId !== null) {
+        // If it's a populated object, extract the _id
+        const userIdObj = startup.userId as any;
+        if (userIdObj._id) {
+          userId = typeof userIdObj._id === 'string' ? userIdObj._id : userIdObj._id.toString();
+        } else if (userIdObj.id) {
+          userId = typeof userIdObj.id === 'string' ? userIdObj.id : userIdObj.id.toString();
+        }
+      }
+    }
+
+    // Check if we have a valid userId
+    if (!userId) {
       setLoadingProfile(false);
       setProfileError('No user ID found for this startup. Profile may not be completed yet.');
       return;
@@ -95,15 +133,20 @@ const StartupManage: React.FC = () => {
     setLoadingProfile(true);
 
     try {
-      console.log('Fetching profile for userId:', startup.userId, 'Type:', typeof startup.userId);
-      const profile = await profileApi.getProfileByUserId(startup.userId);
+      console.log('Fetching profile for userId:', userId);
+      const profile = await profileApi.getProfileByUserId(userId);
       console.log('Profile fetched successfully:', profile);
       setSelectedProfile(profile);
       setProfileError(null);
     } catch (error) {
       console.error('Error fetching profile:', error);
+      // Don't show the raw error message if it contains object details
       const errorMessage = error instanceof Error ? error.message : 'Failed to load profile details';
-      setProfileError(errorMessage);
+      // Clean up error message to avoid showing object structures
+      const cleanErrorMessage = errorMessage.includes('Invalid user ID format') 
+        ? 'Profile details are not available for this startup.'
+        : errorMessage;
+      setProfileError(cleanErrorMessage);
       // Don't close modal on error, let user see the error message
     } finally {
       setLoadingProfile(false);
@@ -314,7 +357,7 @@ const StartupManage: React.FC = () => {
                   </td>
                   <td className="py-3 px-4">
                     <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(startup.status)}`}>
-                      {startup.status}
+                      {normalizeStatus(startup.status)}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -384,7 +427,7 @@ const StartupManage: React.FC = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-400">Status</label>
                     <span className={`text-xs px-2 py-1 rounded-full capitalize mt-1 inline-block ${getStatusColor(selectedStartup.status)}`}>
-                      {selectedStartup.status}
+                      {normalizeStatus(selectedStartup.status)}
                     </span>
                   </div>
                   <div>
@@ -420,15 +463,7 @@ const StartupManage: React.FC = () => {
                   </div>
                 </div>
               ) : profileError ? (
-                <div className="p-4 bg-yellow-900/20 border border-yellow-500/50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <AlertCircle className="h-5 w-5 text-yellow-400" />
-                    <div>
-                      <p className="text-yellow-300 font-medium">Profile Details Not Available</p>
-                      <p className="text-yellow-300/80 text-sm mt-1">{profileError}</p>
-                    </div>
-                  </div>
-                </div>
+                null
               ) : selectedProfile ? (
                 <div className="space-y-6">
                   {/* Step 1: Personal Information */}
