@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { Presentation as PresentationChart, Upload, FileText, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
@@ -7,6 +7,7 @@ import { documentsApi } from '../../services/documentsApi';
 
 const PitchDeck: React.FC = () => {
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -44,45 +45,66 @@ const PitchDeck: React.FC = () => {
   };
 
   const processFile = async (file: File) => {
+    console.log('Processing file:', file.name, 'Size:', file.size, 'Type:', file.type);
+    
     if (!user) {
-      alert('Please log in to upload files');
+      const errorMsg = 'Please log in to upload files';
+      console.error(errorMsg);
+      alert(errorMsg);
+      setUploadError(errorMsg);
       return;
     }
 
     if (!user.id) {
-      alert('User ID is missing. Please log out and log back in.');
+      const errorMsg = 'User ID is missing. Please log out and log back in.';
+      console.error(errorMsg, 'User object:', user);
+      alert(errorMsg);
+      setUploadError(errorMsg);
       return;
     }
 
     // Validate file type
     const allowedTypes = ['pdf', 'ppt', 'pptx'];
     const fileType = getFileType(file.name);
+    console.log('File type detected:', fileType);
     
     if (!allowedTypes.includes(fileType)) {
-      setUploadError('Please upload a valid file format (PDF, PPT, PPTX)');
+      const errorMsg = 'Please upload a valid file format (PDF, PPT, PPTX)';
+      console.error(errorMsg, 'Received type:', fileType);
+      setUploadError(errorMsg);
       return;
     }
 
     // Validate file size (50MB)
-    if (file.size > 50 * 1024 * 1024) {
-      setUploadError('File size must be less than 50MB');
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      const errorMsg = 'File size must be less than 50MB';
+      console.error(errorMsg, 'File size:', file.size, 'Max size:', maxSize);
+      setUploadError(errorMsg);
       return;
     }
 
+    console.log('File validation passed. Starting upload...');
     setIsUploading(true);
     setUploadError(null);
 
     try {
       // Upload the file using documentsApi
-      await documentsApi.uploadDocument(file, user.id);
+      console.log('Calling documentsApi.uploadDocument with userId:', user.id);
+      const uploadedDocument = await documentsApi.uploadDocument(file, user.id, 'Pitch Deck');
+      
+      console.log('Pitch deck uploaded successfully:', uploadedDocument);
       
       setShowUploadForm(false);
       setSelectedTemplate(null);
+      setUploadError(null);
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (error: any) {
       console.error('Upload error:', error);
-      setUploadError(error?.message || 'Error uploading file. Please try again.');
+      const errorMessage = error?.message || 'Error uploading file. Please try again.';
+      console.error('Error message:', errorMessage);
+      setUploadError(errorMessage);
     } finally {
       setIsUploading(false);
     }
@@ -90,11 +112,16 @@ const PitchDeck: React.FC = () => {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    console.log('File selected:', file?.name, file?.size, file?.type);
     if (file) {
       processFile(file);
+    } else {
+      console.warn('No file selected');
     }
     // Reset the input so the same file can be selected again
-    e.target.value = '';
+    if (e.target) {
+      e.target.value = '';
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -238,8 +265,9 @@ const PitchDeck: React.FC = () => {
                   {dragActive ? 'Drop your file here' : 'Drag and drop your file here'}
                 </p>
                 <p className="text-sm text-gray-400 mb-4">or</p>
-                <label className="inline-block">
+                <div className="inline-block">
                   <input 
+                    ref={fileInputRef}
                     type="file" 
                     accept=".pdf,.pptx,.ppt"
                     onChange={handleFileUpload}
@@ -250,6 +278,11 @@ const PitchDeck: React.FC = () => {
                     variant="outline" 
                     className="cursor-pointer"
                     disabled={isUploading}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
                   >
                     {isUploading ? (
                       <>
@@ -260,7 +293,7 @@ const PitchDeck: React.FC = () => {
                       'Browse Files'
                     )}
                   </Button>
-                </label>
+                </div>
               </div>
               <p className="text-xs text-gray-400 text-center">
                 Supported formats: PDF, PPTX, PPT (Max 50MB)

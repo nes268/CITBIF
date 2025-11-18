@@ -74,7 +74,7 @@ class DocumentsApi {
     return this.handleResponse<Document>(response);
   }
 
-  async uploadDocument(file: File, userId: string): Promise<Document> {
+  async uploadDocument(file: File, userId: string, location?: string): Promise<Document> {
     if (!userId) {
       throw new Error('User ID is required to upload documents');
     }
@@ -82,8 +82,11 @@ class DocumentsApi {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('userId', userId);
+    if (location) {
+      formData.append('location', location);
+    }
 
-    console.log('Uploading file:', file.name, 'with userId:', userId);
+    console.log('Uploading file:', file.name, 'with userId:', userId, 'location:', location || 'default');
 
     const response = await fetch(`${API_URL}/api/documents/upload`, {
       method: 'POST',

@@ -1308,9 +1308,9 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const { userId } = req.body;
+    const { userId, location } = req.body;
     
-    console.log('Upload request received. userId:', userId, 'userId type:', typeof userId);
+    console.log('Upload request received. userId:', userId, 'userId type:', typeof userId, 'location:', location);
     
     if (!userId) {
       // Delete uploaded file if userId is missing
@@ -1349,10 +1349,13 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
     const fileSize = (req.file.size / 1024 / 1024).toFixed(2) + ' MB';
     const fileType = path.extname(req.file.originalname).substring(1).toLowerCase();
     const uploadDate = new Date().toISOString().split('T')[0];
+    
+    // Use provided location or default to 'Documents/Uploads'
+    const documentLocation = location || 'Documents/Uploads';
 
     const newDocument = new Document({
       name: req.file.originalname,
-      location: 'Documents/Uploads',
+      location: documentLocation,
       owner: user.fullName,
       fileSize: fileSize,
       uploadDate: uploadDate,
