@@ -78,6 +78,23 @@ class InvestorsApi {
       throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
   }
+
+  async requestIntro(investorEmail: string, startupName: string, requesterEmail: string, requesterName: string, message?: string): Promise<{ message: string; sent: boolean }> {
+    const response = await fetch(`${API_URL}/api/investors/request-intro`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        investorEmail,
+        startupName,
+        requesterEmail,
+        requesterName,
+        message: message || ''
+      }),
+    });
+    return this.handleResponse<{ message: string; sent: boolean }>(response);
+  }
 }
 
 export const investorsApi = new InvestorsApi();

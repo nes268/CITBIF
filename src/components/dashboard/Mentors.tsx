@@ -2,15 +2,28 @@ import React, { useState } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import { Search, User, MessageSquare, Loader2, AlertCircle } from 'lucide-react';
+import { Search, User, MessageSquare, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { Mentor } from '../../types';
 import { useMentors } from '../../hooks/useMentors';
+import { mentorsApi } from '../../services/mentorsApi';
+import { useAuth } from '../../context/AuthContext';
 
 const Mentors: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [formData, setFormData] = useState({
+    startupName: '',
+    topic: '',
+    preferredTimeSlot: '',
+    additionalNotes: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  
+  const { user } = useAuth();
 
   const {
     mentors,
@@ -39,6 +52,72 @@ const Mentors: React.FC = () => {
     setShowProfile(false);
     setShowRequestForm(false);
     setSelectedMentor(null);
+    setFormData({
+      startupName: '',
+      topic: '',
+      preferredTimeSlot: '',
+      additionalNotes: ''
+    });
+    setSubmitError(null);
+    setSubmitSuccess(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear errors when user starts typing
+    if (submitError) setSubmitError(null);
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!formData.startupName.trim()) {
+      setSubmitError('Startup name is required');
+      return;
+    }
+    if (!formData.topic) {
+      setSubmitError('Please select a topic');
+      return;
+    }
+    if (!formData.preferredTimeSlot) {
+      setSubmitError('Please select a preferred time slot');
+      return;
+    }
+    if (!selectedMentor) {
+      setSubmitError('Mentor information is missing');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(false);
+
+    try {
+      await mentorsApi.requestSession({
+        mentorEmail: selectedMentor.email,
+        startupName: formData.startupName.trim(),
+        topic: formData.topic,
+        preferredTimeSlot: formData.preferredTimeSlot,
+        additionalNotes: formData.additionalNotes.trim() || undefined,
+        requesterEmail: user?.email,
+        requesterName: user?.fullName
+      });
+
+      setSubmitSuccess(true);
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        handleBackToMentors();
+      }, 3000);
+    } catch (error: any) {
+      setSubmitError(error.message || 'Failed to send session request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
 
@@ -155,80 +234,141 @@ const Mentors: React.FC = () => {
         </div>
 
         <Card className="p-6 max-w-2xl">
-          <form className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Session Details</h3>
+          {submitSuccess ? (
+            <div className="text-center py-8">
+              <div className="flex justify-center mb-4">
+                <CheckCircle className="h-16 w-16 text-green-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Request Sent Successfully!</h3>
+              <p className="text-gray-400 mb-4">
+                Your session request has been sent to {selectedMentor.name}. They will contact you soon.
+              </p>
+              <p className="text-sm text-gray-500">Redirecting back to mentors...</p>
             </div>
+          ) : (
+            <form className="space-y-6" onSubmit={handleFormSubmit}>
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">Session Details</h3>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Selected Mentor
-              </label>
-              <div className="flex items-center space-x-3 p-3 bg-gray-700/30 rounded-lg">
-                <div className="h-10 w-10 bg-cyan-500 rounded-full flex items-center justify-center text-white font-medium">
-                  {selectedMentor.profilePicture}
+              {submitError && (
+                <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <AlertCircle className="h-5 w-5 text-red-400" />
+                    <p className="text-red-300 text-sm">{submitError}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-white font-medium">{selectedMentor.name}</p>
-                  <p className="text-sm text-gray-400">{selectedMentor.role}</p>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Selected Mentor
+                </label>
+                <div className="flex items-center space-x-3 p-3 bg-gray-700/30 rounded-lg">
+                  <div className="h-10 w-10 bg-cyan-500 rounded-full flex items-center justify-center text-white font-medium">
+                    {selectedMentor.profilePicture}
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">{selectedMentor.name}</p>
+                    <p className="text-sm text-gray-400">{selectedMentor.role}</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <Input
-              label="Startup Name"
-              type="text"
-              placeholder="Enter your startup name"
-            />
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Topic
-              </label>
-              <select className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                <option value="">Select a topic</option>
-                <option value="business-strategy">Business Strategy</option>
-                <option value="product-development">Product Development</option>
-                <option value="marketing">Marketing & Growth</option>
-                <option value="fundraising">Fundraising</option>
-                <option value="operations">Operations</option>
-                <option value="leadership">Leadership</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Preferred Time Slot
-              </label>
-              <select className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                <option value="">Select preferred time</option>
-                <option value="morning">Morning (9 AM - 12 PM)</option>
-                <option value="afternoon">Afternoon (12 PM - 5 PM)</option>
-                <option value="evening">Evening (5 PM - 8 PM)</option>
-                <option value="flexible">Flexible</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Additional Notes
-              </label>
-              <textarea
-                rows={4}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                placeholder="Describe what you'd like to discuss or any specific questions you have..."
+              <Input
+                label="Startup Name"
+                name="startupName"
+                type="text"
+                placeholder="Enter your startup name"
+                value={formData.startupName}
+                onChange={handleInputChange}
+                required
+                disabled={isSubmitting}
               />
-            </div>
 
-            <div className="flex space-x-4">
-              <Button type="button" variant="outline" onClick={handleBackToMentors}>
-                Cancel
-              </Button>
-              <Button type="submit" className="flex-1">
-                Send Request
-              </Button>
-            </div>
-          </form>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Topic <span className="text-red-400">*</span>
+                </label>
+                <select
+                  name="topic"
+                  value={formData.topic}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  required
+                  disabled={isSubmitting}
+                >
+                  <option value="">Select a topic</option>
+                  <option value="business-strategy">Business Strategy</option>
+                  <option value="product-development">Product Development</option>
+                  <option value="marketing">Marketing & Growth</option>
+                  <option value="fundraising">Fundraising</option>
+                  <option value="operations">Operations</option>
+                  <option value="leadership">Leadership</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Preferred Time Slot <span className="text-red-400">*</span>
+                </label>
+                <select
+                  name="preferredTimeSlot"
+                  value={formData.preferredTimeSlot}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  required
+                  disabled={isSubmitting}
+                >
+                  <option value="">Select preferred time</option>
+                  <option value="morning">Morning (9 AM - 12 PM)</option>
+                  <option value="afternoon">Afternoon (12 PM - 5 PM)</option>
+                  <option value="evening">Evening (5 PM - 8 PM)</option>
+                  <option value="flexible">Flexible</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Additional Notes
+                </label>
+                <textarea
+                  name="additionalNotes"
+                  rows={4}
+                  value={formData.additionalNotes}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Describe what you'd like to discuss or any specific questions you have..."
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="flex space-x-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleBackToMentors}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="flex-1" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Request'
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
         </Card>
       </div>
     );

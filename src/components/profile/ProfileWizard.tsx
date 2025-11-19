@@ -48,10 +48,13 @@ const ProfileWizard: React.FC = () => {
           ...profileData
         } as Partial<Profile> & { userId: string });
 
-        // Create startup entry from profile data
+        // Create or update startup entry from profile data
         if (savedProfile.startupName && savedProfile.founderName && savedProfile.sector) {
           try {
-            await startupsApi.createStartup({
+            // Check if startup already exists for this user
+            const existingStartup = await startupsApi.getStartupByUserId(user.id);
+            
+            const startupData = {
               name: savedProfile.startupName,
               founder: savedProfile.founderName,
               sector: savedProfile.sector,
@@ -59,21 +62,30 @@ const ProfileWizard: React.FC = () => {
               email: savedProfile.email,
               submissionDate: new Date().toISOString().split('T')[0],
               userId: user.id,
-              status: 'pending'
-            });
-          } catch (startupError) {
-            console.error('Error creating startup entry:', startupError);
-            // Don't fail the profile save if startup creation fails
+              status: 'pending' as const
+            };
+
+            if (existingStartup) {
+              // Update existing startup
+              await startupsApi.updateStartup(existingStartup.id, startupData);
+            } else {
+              // Create new startup
+              await startupsApi.createStartup(startupData);
+            }
+          } catch (startupError: any) {
+            console.error('Error creating/updating startup entry:', startupError);
+            // Don't fail the profile save if startup creation/update fails
+            // The profile is already saved successfully
           }
         }
 
-        // Update user profileComplete status (but don't mark as complete until approved)
-        // The profile is saved but pending admin approval
+        // Clear any previous errors and show success
+        setError(null);
+        setIsSaving(false);
         setProfileSubmitted(true);
       } catch (err: any) {
         setError(err.message || 'Failed to save profile. Please try again.');
         console.error('Error saving profile:', err);
-      } finally {
         setIsSaving(false);
       }
     }

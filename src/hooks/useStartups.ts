@@ -8,7 +8,7 @@ export interface UseStartupsReturn {
   error: string | null;
   refreshStartups: () => Promise<void>;
   updateStartup: (id: string, updates: Partial<Startup>) => Promise<Startup>;
-  updateStartupPhase: (userId: string, phase: 'idea' | 'seed' | 'series-a' | 'series-b' | 'series-c' | 'growth' | 'exit') => Promise<Startup>;
+  updateStartupPhase: (userId: string, phase: 'idea' | 'mvp' | 'seed' | 'series-a' | 'growth' | 'scale') => Promise<Startup>;
   deleteStartup: (id: string) => Promise<void>;
 }
 
@@ -63,7 +63,7 @@ export const useStartups = (): UseStartupsReturn => {
     }
   }, []);
 
-  const updateStartupPhase = useCallback(async (userId: string, phase: 'idea' | 'seed' | 'series-a' | 'series-b' | 'series-c' | 'growth' | 'exit'): Promise<Startup> => {
+  const updateStartupPhase = useCallback(async (userId: string, phase: 'idea' | 'mvp' | 'seed' | 'series-a' | 'growth' | 'scale'): Promise<Startup> => {
     try {
       setError(null);
       const updatedStartup = await startupsApi.updateStartupPhase(userId, phase);

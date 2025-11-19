@@ -10,14 +10,15 @@ import {
   Clock,
   AlertCircle,
   Loader2,
-  X,
-  Target
+  X
 } from 'lucide-react';
 import { useInvestors } from '../../../hooks/useInvestors';
 import { useFunding } from '../../../context/FundingContext';
 import { useAlerts } from '../../../context/AlertsContext';
 import { useAuth } from '../../../context/AuthContext';
 import { startupsApi } from '../../../services/startupsApi';
+import { investorsApi } from '../../../services/investorsApi';
+import { profileApi } from '../../../services/profileApi';
 
 const Overview: React.FC = () => {
   const { user } = useAuth();
@@ -26,6 +27,10 @@ const Overview: React.FC = () => {
   const { getUpcomingAlerts, markAsCompleted, deleteAlert } = useAlerts();
   const [startupPhase, setStartupPhase] = useState<string | null>(null);
   const [loadingPhase, setLoadingPhase] = useState(true);
+  const [startupName, setStartupName] = useState<string>('');
+  const [requestingIntro, setRequestingIntro] = useState<string | null>(null);
+  const [introSuccess, setIntroSuccess] = useState<string | null>(null);
+  const [introError, setIntroError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,14 +38,33 @@ const Overview: React.FC = () => {
         try {
           setLoadingPhase(true);
           
-          // Fetch startup phase
+          // Fetch startup phase and name
+          let foundStartupName = false;
           try {
             const startups = await startupsApi.getStartups(user.id);
-            if (startups.length > 0 && startups[0].startupPhase) {
-              setStartupPhase(startups[0].startupPhase);
+            if (startups.length > 0) {
+              if (startups[0].startupPhase) {
+                setStartupPhase(startups[0].startupPhase);
+              }
+              if (startups[0].name) {
+                setStartupName(startups[0].name);
+                foundStartupName = true;
+              }
             }
           } catch (error) {
             console.error('Error fetching startup phase:', error);
+          }
+
+          // Fetch profile to get startup name if not available from startup
+          if (!foundStartupName) {
+            try {
+              const profile = await profileApi.getProfileByUserId(user.id);
+              if (profile.startupName) {
+                setStartupName(profile.startupName);
+              }
+            } catch (error) {
+              console.error('Error fetching profile:', error);
+            }
           }
         } finally {
           setLoadingPhase(false);
@@ -55,13 +79,12 @@ const Overview: React.FC = () => {
   const getPhaseLabel = (phase: string | null) => {
     if (!phase) return 'Not Set';
     const phaseMap: { [key: string]: string } = {
-      'idea': 'Idea Stage',
-      'seed': 'Seed Stage',
+      'idea': 'Idea',
+      'mvp': 'MVP',
+      'seed': 'Seed',
       'series-a': 'Series A',
-      'series-b': 'Series B',
-      'series-c': 'Series C',
-      'growth': 'Growth Stage',
-      'exit': 'Exit Stage'
+      'growth': 'Growth',
+      'scale': 'Scale'
     };
     return phaseMap[phase] || phase;
   };
@@ -74,6 +97,42 @@ const Overview: React.FC = () => {
 
   const handleDeleteAlert = (alertId: string) => {
     deleteAlert(alertId);
+  };
+
+  const handleRequestIntro = async (investor: { id: string; email: string; name: string }) => {
+    if (!user?.id || !user?.email || !user?.fullName) {
+      setIntroError('User information not available. Please log in again.');
+      setTimeout(() => setIntroError(null), 5000);
+      return;
+    }
+
+    if (!startupName) {
+      setIntroError('Startup name not found. Please complete your profile.');
+      setTimeout(() => setIntroError(null), 5000);
+      return;
+    }
+
+    setRequestingIntro(investor.id);
+    setIntroError(null);
+    setIntroSuccess(null);
+
+    try {
+      await investorsApi.requestIntro(
+        investor.email,
+        startupName,
+        user.email,
+        user.fullName
+      );
+      
+      setIntroSuccess(`Introduction request sent to ${investor.name} successfully!`);
+      setTimeout(() => setIntroSuccess(null), 5000);
+    } catch (error: any) {
+      console.error('Error sending intro request:', error);
+      setIntroError(error.message || 'Failed to send introduction request. Please try again.');
+      setTimeout(() => setIntroError(null), 5000);
+    } finally {
+      setRequestingIntro(null);
+    }
   };
 
 
@@ -151,8 +210,7 @@ const Overview: React.FC = () => {
       {/* Upcoming Alerts */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-white flex items-center">
-            <AlertCircle className="h-5 w-5 mr-2 text-blue-400" />
+          <h2 className="text-xl font-semibold text-white">
             Upcoming Alerts
           </h2>
           <div className="text-sm text-gray-400">
@@ -218,87 +276,111 @@ const Overview: React.FC = () => {
         )}
       </Card>
 
-      {/* Startup Phase */}
-      {startupPhase && (
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <Target className="h-5 w-5 text-cyan-400" />
-              <h2 className="text-lg font-semibold text-white">Startup Phase</h2>
-            </div>
-          </div>
-          <div className="mb-4">
-            <p className="text-xs text-gray-400 mb-1">Current Phase</p>
-            <p className="text-xl font-bold text-white">{getPhaseLabel(startupPhase)}</p>
-          </div>
-          <div className="pt-4 border-t border-gray-700">
-            <p className="text-xs text-gray-400">
-              Update in <span className="text-cyan-400">Settings</span> page
-            </p>
-          </div>
-        </Card>
-      )}
-
-      {/* Milestones Timeline and Investor Suggestions Row */}
+      {/* Fundraising Progress and Investor Suggestions Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Milestones Timeline */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-white flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-cyan-400" />
-              Journey
-            </h2>
-            <div className="text-sm text-gray-400">
-              {milestones.filter(m => m.status === 'completed').length}/{milestones.length}
+        {/* Left Column - Fundraising and Startup Stage */}
+        <div className="space-y-6">
+          {/* Fundraising Progress */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2 text-cyan-400" />
+                Fundraising
+              </h2>
+              <div className="text-sm text-gray-400">
+                {milestones.filter(m => m.status === 'completed').length}/{milestones.length}
+              </div>
             </div>
-          </div>
-          
-          <div className="relative">
-            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-700"></div>
             
-            <div className="space-y-4">
-              {milestones.map((milestone, index) => (
-                <div key={index} className="relative flex items-center space-x-4">
-                  <div className={`relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                    milestone.status === 'completed' 
-                      ? 'bg-emerald-400 border-emerald-400' 
-                      : milestone.status === 'current'
-                      ? 'bg-blue-400 border-blue-400'
-                      : 'bg-gray-800 border-gray-600'
-                  }`}>
-                    {getStatusIcon(milestone.status)}
-                  </div>
-
-                  <div className="flex-1 flex items-center justify-between">
-                    <div>
-                      <h3 className={`font-medium ${
-                        milestone.status === 'completed' ? 'text-emerald-400' :
-                        milestone.status === 'current' ? 'text-blue-400' :
-                        'text-gray-400'
+            {/* Horizontal Progress Bar */}
+            <div className="relative">
+              {/* Progress Line */}
+              <div className="absolute top-6 left-0 right-0 h-1 bg-gray-700 rounded-full">
+                <div 
+                  className="h-1 bg-gradient-to-r from-emerald-400 to-blue-400 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${(milestones.filter(m => m.status === 'completed').length / milestones.length) * 100}%` 
+                  }}
+                ></div>
+              </div>
+              
+              {/* Steps */}
+              <div className="relative flex items-center justify-between">
+                {milestones.map((milestone, index) => {
+                  const isCompleted = milestone.status === 'completed';
+                  const isCurrent = milestone.status === 'current';
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      className="relative flex flex-col items-center"
+                    >
+                      {/* Step Circle */}
+                      <div className={`relative z-10 flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-200 ${
+                        isCompleted 
+                          ? 'bg-emerald-400 border-emerald-400 shadow-lg shadow-emerald-400/50' 
+                          : isCurrent
+                          ? 'bg-blue-400 border-blue-400 shadow-lg shadow-blue-400/50'
+                          : 'bg-gray-800 border-gray-600'
                       }`}>
-                        {milestone.stage}
-                      </h3>
-                    </div>
-                    
-                    <div className="flex items-center space-x-3">
-                      <div className="w-16 bg-gray-700 rounded-full h-1">
-                        <div 
-                          className={`h-1 rounded-full ${getProgressColor(milestone.status)}`}
-                          style={{ width: `${milestone.progress}%` }}
-                        ></div>
+                        {getStatusIcon(milestone.status)}
                       </div>
-                      <span className="text-xs text-gray-400 w-8">{milestone.progress}%</span>
+                      
+                      {/* Step Label */}
+                      <div className="mt-3 text-center">
+                        <p className={`text-xs font-medium ${
+                          isCompleted ? 'text-emerald-400' :
+                          isCurrent ? 'text-blue-400' :
+                          'text-gray-400'
+                        }`}>
+                          {milestone.stage}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {milestone.progress}%
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+
+          {/* Startup Stage */}
+          {startupPhase && (
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-white">Startup Stage</h2>
+              </div>
+              <div className="mb-4">
+                <p className="text-xs text-gray-400 mb-1">Current Stage</p>
+                <p className="text-xl font-bold text-white">{getPhaseLabel(startupPhase)}</p>
+              </div>
+            </Card>
+          )}
+        </div>
 
         {/* Investor Suggestions */}
         <Card className="p-6">
           <h2 className="text-xl font-semibold text-white mb-6">Available Investors</h2>
+          
+          {introSuccess && (
+            <div className="mb-4 p-3 bg-green-900/20 border border-green-500/50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-4 w-4 text-green-400" />
+                <span className="text-green-300 text-sm">{introSuccess}</span>
+              </div>
+            </div>
+          )}
+
+          {introError && (
+            <div className="mb-4 p-3 bg-red-900/20 border border-red-500/50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="h-4 w-4 text-red-400" />
+                <span className="text-red-300 text-sm">{introError}</span>
+              </div>
+            </div>
+          )}
           
           {investorsError && (
             <div className="mb-4 p-3 bg-red-900/20 border border-red-500/50 rounded-lg">
@@ -323,25 +405,36 @@ const Overview: React.FC = () => {
               <p className="text-gray-400">Investors will appear here once they are added by administrators</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="flex flex-wrap gap-4 justify-center">
               {investors.slice(0, 3).map((investor) => (
-                <div key={investor.id} className="bg-gray-700/50 rounded-lg p-5 border border-gray-600 flex flex-col items-center text-center max-w-[200px] mx-auto min-h-[280px]">
-                  <div className="mb-4">
-                    <div className="h-16 w-16 bg-cyan-500 rounded-full flex items-center justify-center text-white font-medium mx-auto mb-3">
+                <div key={investor.id} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600 flex flex-col items-center text-center w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.67rem)]">
+                  <div className="mb-3">
+                    <div className="h-12 w-12 bg-cyan-500 rounded-full flex items-center justify-center text-white font-medium mx-auto mb-2">
                       {investor.profilePicture}
                     </div>
-                    <h3 className="text-white font-medium text-lg mb-1">{investor.name}</h3>
-                    <p className="text-sm text-gray-400">{investor.firm}</p>
+                    <h3 className="text-white font-medium text-base mb-1">{investor.name}</h3>
+                    <p className="text-xs text-gray-400">{investor.firm}</p>
                   </div>
-                  <p className="text-sm text-gray-300 mb-3 flex-grow">{investor.backgroundSummary}</p>
-                  <p className="text-xs text-gray-400 mb-4">Investment Range: {investor.investmentRange}</p>
-                  <button className="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">
-                    Request Intro
+                  <p className="text-xs text-gray-300 mb-2 line-clamp-3">{investor.backgroundSummary}</p>
+                  <p className="text-xs text-gray-400 mb-3">Investment Range: {investor.investmentRange}</p>
+                  <button 
+                    onClick={() => handleRequestIntro(investor)}
+                    disabled={requestingIntro === investor.id}
+                    className="w-full bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-1.5 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center"
+                  >
+                    {requestingIntro === investor.id ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Request Intro'
+                    )}
                   </button>
                 </div>
               ))}
               {investors.length > 3 && (
-                <div className="text-center">
+                <div className="w-full text-center mt-4">
                   <button className="text-cyan-400 hover:text-cyan-300 text-sm font-medium">
                     View All Investors ({investors.length - 3} more)
                   </button>

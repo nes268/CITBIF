@@ -7,6 +7,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import nodemailer from 'nodemailer';
 
 dotenv.config();
 
@@ -232,11 +233,10 @@ const startupSchema = new mongoose.Schema({
   sector: { type: String, required: true },
   type: { type: String, enum: ['innovation', 'incubation'], required: true },
   status: { type: String, enum: ['pending', 'approved', 'rejected', 'active', 'completed', 'dropout'], default: 'pending' },
-  trlLevel: { type: Number, min: 1, max: 9, default: 1 },
   email: { type: String, required: true },
   submissionDate: { type: String, required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  startupPhase: { type: String, enum: ['idea', 'seed', 'series-a', 'series-b', 'series-c', 'growth', 'exit'], default: 'idea' },
+  startupPhase: { type: String, enum: ['idea', 'mvp', 'seed', 'series-a', 'growth', 'scale'], default: 'idea' },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -616,6 +616,146 @@ app.delete('/api/mentors/:id', async (req, res) => {
   }
 });
 
+// POST send mentor session request email
+app.post('/api/mentors/request-session', async (req, res) => {
+  try {
+    const { mentorEmail, startupName, topic, preferredTimeSlot, additionalNotes, requesterEmail, requesterName } = req.body;
+
+    // Validation
+    if (!mentorEmail || !startupName || !topic || !preferredTimeSlot) {
+      return res.status(400).json({ error: 'Mentor email, startup name, topic, and preferred time slot are required' });
+    }
+
+    // Find mentor to get their name
+    const mentor = await Mentor.findOne({ email: mentorEmail });
+    if (!mentor) {
+      return res.status(404).json({ error: 'Mentor not found' });
+    }
+
+    // Configure nodemailer transporter
+    // For production, use environment variables for email credentials
+    // For development/testing, you can use a service like Gmail, SendGrid, or Mailtrap
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER || process.env.EMAIL_USER,
+        pass: process.env.SMTP_PASS || process.env.EMAIL_PASSWORD,
+      },
+    });
+
+    // If no email credentials are configured, return a helpful error
+    if (!process.env.SMTP_USER && !process.env.EMAIL_USER) {
+      console.warn('Email credentials not configured. Please set SMTP_USER and SMTP_PASS environment variables.');
+      // For development, you can still return success but log the email content
+      console.log('Email would be sent with the following content:');
+      console.log('To:', mentorEmail);
+      console.log('Subject: Mentoring Session Request from', startupName);
+      console.log('Body:', {
+        startupName,
+        topic,
+        preferredTimeSlot,
+        additionalNotes,
+        requesterEmail,
+        requesterName
+      });
+      
+      return res.status(200).json({ 
+        message: 'Session request logged (email not configured). Please configure SMTP settings for production.',
+        logged: true
+      });
+    }
+
+    // Format topic display name
+    const topicDisplayNames = {
+      'business-strategy': 'Business Strategy',
+      'product-development': 'Product Development',
+      'marketing': 'Marketing & Growth',
+      'fundraising': 'Fundraising',
+      'operations': 'Operations',
+      'leadership': 'Leadership'
+    };
+
+    const topicDisplay = topicDisplayNames[topic] || topic;
+
+    // Format time slot display name
+    const timeSlotDisplayNames = {
+      'morning': 'Morning (9 AM - 12 PM)',
+      'afternoon': 'Afternoon (12 PM - 5 PM)',
+      'evening': 'Evening (5 PM - 8 PM)',
+      'flexible': 'Flexible'
+    };
+
+    const timeSlotDisplay = timeSlotDisplayNames[preferredTimeSlot] || preferredTimeSlot;
+
+    // Email content
+    const emailSubject = `Mentoring Session Request from ${startupName}`;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #06b6d4;">New Mentoring Session Request</h2>
+        <p>Hello ${mentor.name},</p>
+        <p>You have received a new mentoring session request:</p>
+        
+        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #1f2937; margin-top: 0;">Session Details</h3>
+          <p><strong>Startup Name:</strong> ${startupName}</p>
+          <p><strong>Topic:</strong> ${topicDisplay}</p>
+          <p><strong>Preferred Time Slot:</strong> ${timeSlotDisplay}</p>
+          ${requesterName ? `<p><strong>Requested By:</strong> ${requesterName}</p>` : ''}
+          ${requesterEmail ? `<p><strong>Contact Email:</strong> ${requesterEmail}</p>` : ''}
+          ${additionalNotes ? `<p><strong>Additional Notes:</strong><br>${additionalNotes.replace(/\n/g, '<br>')}</p>` : ''}
+        </div>
+        
+        <p>Please review this request and respond to ${requesterEmail || 'the requester'} at your earliest convenience.</p>
+        
+        <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+          This is an automated message from the CITBIF Startup Dashboard.
+        </p>
+      </div>
+    `;
+
+    const emailText = `
+New Mentoring Session Request
+
+Hello ${mentor.name},
+
+You have received a new mentoring session request:
+
+Session Details:
+- Startup Name: ${startupName}
+- Topic: ${topicDisplay}
+- Preferred Time Slot: ${timeSlotDisplay}
+${requesterName ? `- Requested By: ${requesterName}` : ''}
+${requesterEmail ? `- Contact Email: ${requesterEmail}` : ''}
+${additionalNotes ? `- Additional Notes:\n${additionalNotes}` : ''}
+
+Please review this request and respond to ${requesterEmail || 'the requester'} at your earliest convenience.
+
+This is an automated message from the CITBIF Startup Dashboard.
+    `;
+
+    // Send email
+    const mailOptions = {
+      from: process.env.SMTP_FROM || process.env.EMAIL_USER || 'noreply@citbif.com',
+      to: mentorEmail,
+      subject: emailSubject,
+      text: emailText,
+      html: emailHtml,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ 
+      message: 'Session request email sent successfully',
+      sent: true
+    });
+  } catch (error) {
+    console.error('Error sending mentor session request email:', error);
+    res.status(500).json({ error: 'Server error while sending email: ' + error.message });
+  }
+});
+
 // ==================== EVENT ENDPOINTS ====================
 
 // GET all events
@@ -905,6 +1045,114 @@ app.get('/api/investors', async (req, res) => {
   } catch (error) {
     console.error('Error fetching investors:', error);
     res.status(500).json({ error: 'Server error while fetching investors' });
+  }
+});
+
+// POST request intro to investor (must be before /:id route)
+app.post('/api/investors/request-intro', async (req, res) => {
+  try {
+    const { investorEmail, startupName, requesterEmail, requesterName, message } = req.body;
+
+    // Validation
+    if (!investorEmail || !startupName || !requesterEmail || !requesterName) {
+      return res.status(400).json({ error: 'Investor email, startup name, requester email, and requester name are required' });
+    }
+
+    // Find investor to get their name
+    const investor = await Investor.findOne({ email: investorEmail });
+    if (!investor) {
+      return res.status(404).json({ error: 'Investor not found' });
+    }
+
+    // Configure nodemailer transporter
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER || process.env.EMAIL_USER,
+        pass: process.env.SMTP_PASS || process.env.EMAIL_PASSWORD,
+      },
+    });
+
+    // If no email credentials are configured, return a helpful error
+    if (!process.env.SMTP_USER && !process.env.EMAIL_USER) {
+      console.warn('Email credentials not configured. Please set SMTP_USER and SMTP_PASS environment variables.');
+      // For development, you can still return success but log the email content
+      console.log('Email would be sent with the following content:');
+      console.log('To:', investorEmail);
+      console.log('Subject: Introduction Request from', startupName);
+      console.log('Body:', {
+        investorName: investor.name,
+        startupName,
+        requesterEmail,
+        requesterName,
+        message
+      });
+      
+      return res.status(200).json({ 
+        message: 'Intro request logged (email not configured). Please configure SMTP settings for production.',
+        logged: true
+      });
+    }
+
+    // Email content
+    const emailSubject = `Introduction Request from ${startupName}`;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #06b6d4;">New Introduction Request</h2>
+        <p>Hello ${investor.name},</p>
+        <p>You have received a new introduction request:</p>
+        
+        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #1f2937; margin-top: 0;">Request Details</h3>
+          <p><strong>Startup Name:</strong> ${startupName}</p>
+          <p><strong>Requested By:</strong> ${requesterName}</p>
+          <p><strong>Contact Email:</strong> ${requesterEmail}</p>
+          ${message ? `<p><strong>Message:</strong><br>${message.replace(/\n/g, '<br>')}</p>` : ''}
+        </div>
+        
+        <p>Please review this request and respond to ${requesterEmail} at your earliest convenience.</p>
+        
+        <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+          This is an automated message from the CITBIF Startup Dashboard.
+        </p>
+      </div>
+    `;
+
+    const emailText = `
+New Introduction Request
+
+Hello ${investor.name},
+
+You have received a new introduction request:
+
+Startup Name: ${startupName}
+Requested By: ${requesterName}
+Contact Email: ${requesterEmail}
+${message ? `Message: ${message}` : ''}
+
+Please review this request and respond to ${requesterEmail} at your earliest convenience.
+
+This is an automated message from the CITBIF Startup Dashboard.
+    `;
+
+    // Send email
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || process.env.EMAIL_USER,
+      to: investorEmail,
+      subject: emailSubject,
+      text: emailText,
+      html: emailHtml
+    });
+
+    res.status(200).json({ 
+      message: 'Introduction request email sent successfully',
+      sent: true
+    });
+  } catch (error) {
+    console.error('Error sending intro request email:', error);
+    res.status(500).json({ error: 'Server error while sending intro request email' });
   }
 });
 
@@ -1981,7 +2229,6 @@ app.get('/api/startups/:id', async (req, res) => {
       sector: startup.sector,
       type: startup.type,
       status: startup.status,
-      trlLevel: startup.trlLevel,
       email: startup.email,
       submissionDate: startup.submissionDate,
       userId: startup.userId ? startup.userId.toString() : null,
@@ -2017,7 +2264,6 @@ app.get('/api/startups', async (req, res) => {
       sector: startup.sector,
       type: startup.type,
       status: startup.status,
-      trlLevel: startup.trlLevel,
       email: startup.email,
       submissionDate: startup.submissionDate,
       userId: startup.userId ? startup.userId.toString() : null,
@@ -2035,7 +2281,7 @@ app.get('/api/startups', async (req, res) => {
 // POST create startup (from profile)
 app.post('/api/startups', async (req, res) => {
   try {
-    const { name, founder, sector, type, status, trlLevel, email, submissionDate, userId } = req.body;
+    const { name, founder, sector, type, status, email, submissionDate, userId } = req.body;
 
     if (!name || !founder || !sector || !type || !email || !submissionDate) {
       return res.status(400).json({ error: 'Name, founder, sector, type, email, and submissionDate are required' });
@@ -2047,7 +2293,6 @@ app.post('/api/startups', async (req, res) => {
       sector,
       type,
       status: status || 'pending',
-      trlLevel: trlLevel || 1,
       email,
       submissionDate,
       userId: userId || null,
@@ -2085,7 +2330,6 @@ app.post('/api/startups', async (req, res) => {
       sector: newStartup.sector,
       type: newStartup.type,
       status: newStartup.status,
-      trlLevel: newStartup.trlLevel,
       email: newStartup.email,
       submissionDate: newStartup.submissionDate,
       userId: newStartup.userId ? newStartup.userId.toString() : null,
@@ -2134,7 +2378,6 @@ app.put('/api/startups/:id', async (req, res) => {
       sector: startup.sector,
       type: startup.type,
       status: startup.status,
-      trlLevel: startup.trlLevel,
       email: startup.email,
       submissionDate: startup.submissionDate,
       userId: startup.userId ? startup.userId.toString() : null,
@@ -2162,7 +2405,7 @@ app.put('/api/startups/phase/:userId', async (req, res) => {
       return res.status(400).json({ error: 'Startup phase is required' });
     }
 
-    const validPhases = ['idea', 'seed', 'series-a', 'series-b', 'series-c', 'growth', 'exit'];
+    const validPhases = ['idea', 'mvp', 'seed', 'series-a', 'growth', 'scale'];
     if (!validPhases.includes(startupPhase)) {
       return res.status(400).json({ error: 'Invalid startup phase' });
     }
@@ -2183,7 +2426,6 @@ app.put('/api/startups/phase/:userId', async (req, res) => {
       sector: startup.sector,
       type: startup.type,
       status: startup.status,
-      trlLevel: startup.trlLevel,
       email: startup.email,
       submissionDate: startup.submissionDate,
       userId: startup.userId ? startup.userId.toString() : null,
@@ -2242,7 +2484,6 @@ app.post('/api/startups/:id/approve', async (req, res) => {
       sector: startup.sector,
       type: startup.type,
       status: startup.status,
-      trlLevel: startup.trlLevel,
       email: startup.email,
       submissionDate: startup.submissionDate,
       userId: startup.userId ? startup.userId.toString() : null,
@@ -2317,7 +2558,6 @@ app.post('/api/startups/:id/reject', async (req, res) => {
       sector: startup.sector,
       type: startup.type,
       status: startup.status,
-      trlLevel: startup.trlLevel,
       email: startup.email,
       submissionDate: startup.submissionDate,
       userId: startup.userId ? startup.userId.toString() : null,
@@ -2510,6 +2750,29 @@ app.get('/api/notifications/admin/:adminId/unread-count', async (req, res) => {
   } catch (error) {
     console.error('Error fetching unread admin count:', error);
     res.status(500).json({ error: 'Server error while fetching unread count' });
+  }
+});
+
+// DELETE admin notification
+app.delete('/api/notifications/admin/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid notification ID' });
+    }
+
+    const notification = await AdminNotification.findById(id);
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    await AdminNotification.findByIdAndDelete(id);
+
+    res.status(200).json({ message: 'Notification deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting admin notification:', error);
+    res.status(500).json({ error: 'Server error while deleting notification' });
   }
 });
 

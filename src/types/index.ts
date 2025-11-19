@@ -215,5 +215,5 @@ export interface Startup {
   email: string;
   submissionDate: string;
   userId?: string;
-  startupPhase?: 'idea' | 'seed' | 'series-a' | 'series-b' | 'series-c' | 'growth' | 'exit';
+  startupPhase?: 'idea' | 'mvp' | 'seed' | 'series-a' | 'growth' | 'scale';
 }

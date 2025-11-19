@@ -19,7 +19,7 @@ interface NotificationsContextType {
   addNotification: (notification: Omit<AdminNotification, 'id' | 'createdAt' | 'read'>) => void;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
-  deleteNotification: (id: string) => void;
+  deleteNotification: (id: string) => Promise<void>;
   getUnreadCount: () => number;
   getRecentNotifications: (limit?: number) => AdminNotification[];
   refreshNotifications: () => Promise<void>;
@@ -180,8 +180,34 @@ export const NotificationsProvider: React.FC<{ children: ReactNode }> = ({ child
     }
   };
 
-  const deleteNotification = (id: string) => {
+  const deleteNotification = async (id: string) => {
+    // Optimistically update UI
+    const notificationToDelete = notifications.find(n => n.id === id);
     setNotifications(prev => prev.filter(notification => notification.id !== id));
+
+    // Delete from backend if admin is logged in
+    if (user && user.role === 'admin') {
+      try {
+        const response = await fetch(`${API_URL}/api/notifications/admin/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete notification');
+        }
+      } catch (error) {
+        console.error('Error deleting notification:', error);
+        // Revert on error - add the notification back
+        if (notificationToDelete) {
+          setNotifications(prev => [...prev, notificationToDelete].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          ));
+        }
+      }
+    }
   };
 
   const getUnreadCount = () => {

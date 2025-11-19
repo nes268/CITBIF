@@ -12,8 +12,7 @@ interface FundingInfoProps {
 }
 
 const fundingStages = [
-  'Pre-seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Series D+', 
-  'Bridge Round', 'Convertible Note', 'Grant Funding', 'Bootstrapped'
+  'Idea', 'MVP', 'Seed', 'Series A', 'Growth', 'Scale'
 ];
 
 const FundingInfo: React.FC<FundingInfoProps> = ({ data, updateData, onNext, onPrev }) => {

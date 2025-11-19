@@ -11,7 +11,6 @@ const StartupManage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSector, setFilterSector] = useState('all');
   const [filterType, setFilterType] = useState('all');
-  const [filterTRL, setFilterTRL] = useState('all');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
@@ -48,12 +47,8 @@ const StartupManage: React.FC = () => {
     
     const matchesSector = filterSector === 'all' || startup.sector === filterSector;
     const matchesType = filterType === 'all' || startup.type === filterType;
-    const matchesTRL = filterTRL === 'all' || 
-      (filterTRL === '1-3' && startup.trlLevel <= 3) ||
-      (filterTRL === '4-6' && startup.trlLevel >= 4 && startup.trlLevel <= 6) ||
-      (filterTRL === '7-9' && startup.trlLevel >= 7);
 
-    return matchesSearch && matchesSector && matchesType && matchesTRL;
+    return matchesSearch && matchesSector && matchesType;
   });
 
   const normalizeStatus = (status: string): 'active' | 'dropout' => {
@@ -87,12 +82,6 @@ const StartupManage: React.FC = () => {
 
   const getTypeColor = (type: string) => {
     return type === 'incubation' ? 'bg-purple-900/30 text-purple-400' : 'bg-cyan-900/30 text-cyan-400';
-  };
-
-  const getTRLColor = (level: number) => {
-    if (level <= 3) return 'bg-red-500';
-    if (level <= 6) return 'bg-yellow-500';
-    return 'bg-green-500';
   };
 
   const handleStartupNameClick = async (startup: Startup) => {
@@ -302,16 +291,6 @@ const StartupManage: React.FC = () => {
               <option value="incubation">Incubation</option>
             </select>
 
-            <select
-              value={filterTRL}
-              onChange={(e) => setFilterTRL(e.target.value)}
-              className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-            >
-              <option value="all">All TRL Levels</option>
-              <option value="1-3">TRL 1-3</option>
-              <option value="4-6">TRL 4-6</option>
-              <option value="7-9">TRL 7-9</option>
-            </select>
           </div>
         </div>
       </Card>
@@ -429,13 +408,6 @@ const StartupManage: React.FC = () => {
                     <span className={`text-xs px-2 py-1 rounded-full capitalize mt-1 inline-block ${getStatusColor(selectedStartup.status)}`}>
                       {normalizeStatus(selectedStartup.status)}
                     </span>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">TRL Level</label>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <div className={`w-3 h-3 rounded-full ${getTRLColor(selectedStartup.trlLevel)}`} />
-                      <span className="text-white font-medium">TRL {selectedStartup.trlLevel}</span>
-                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-400 flex items-center">

@@ -303,10 +303,6 @@ const InvestorManage: React.FC = () => {
               />
             </div>
 
-            <div className="text-sm text-gray-400">
-              <p>💡 Profile picture initials will be auto-generated from the name if not provided.</p>
-            </div>
-
             <div className="flex space-x-4">
               <Button type="button" variant="outline" onClick={resetForm} disabled={isSubmitting}>
                 Cancel

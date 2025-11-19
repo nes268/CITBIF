@@ -85,7 +85,7 @@ class StartupsApi {
     }
   }
 
-  async updateStartupPhase(userId: string, startupPhase: 'idea' | 'seed' | 'series-a' | 'series-b' | 'series-c' | 'growth' | 'exit'): Promise<Startup> {
+  async updateStartupPhase(userId: string, startupPhase: 'idea' | 'mvp' | 'seed' | 'series-a' | 'growth' | 'scale'): Promise<Startup> {
     const response = await fetch(`${API_URL}/api/startups/phase/${userId}`, {
       method: 'PUT',
       headers: {

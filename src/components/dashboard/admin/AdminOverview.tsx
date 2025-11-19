@@ -387,9 +387,9 @@ const AdminOverview: React.FC = () => {
                 {/* Pie Chart SVG */}
                 <div className="relative mb-6">
                   <svg 
-                    width="280" 
-                    height="280" 
-                    viewBox="0 0 280 280" 
+                    width="320" 
+                    height="320" 
+                    viewBox="0 0 320 320" 
                     className="drop-shadow-lg"
                     onMouseMove={(e) => {
                       if (hoveredSector) {
@@ -411,10 +411,10 @@ const AdminOverview: React.FC = () => {
                       const isLastSlice = index === sectorData.length - 1;
                       const endAngle = isLastSlice ? 360 : startAngle + (percentage / 100) * 360;
                       
-                      // Center of the SVG (viewBox is 0 0 280 280, so center is 140, 140)
-                      const centerX = 140;
-                      const centerY = 140;
-                      const radius = 110; // Radius of the pie chart
+                      // Center of the SVG (viewBox is 0 0 320 320, so center is 160, 160)
+                      const centerX = 160;
+                      const centerY = 160;
+                      const radius = 125; // Radius of the pie chart
                       
                       // Calculate midpoint angle for label positioning
                       const midAngle = percentage === 100 ? 0 : (startAngle + endAngle) / 2;
@@ -427,6 +427,11 @@ const AdminOverview: React.FC = () => {
                         <g 
                           key={index} 
                           className="group cursor-pointer"
+                          transform={`translate(${centerX}, ${centerY})`}
+                          style={{ 
+                            transition: 'transform 0.3s ease-out',
+                            transformOrigin: '0 0'
+                          }}
                           onMouseEnter={(e) => {
                             const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect();
                             if (rect) {
@@ -440,6 +445,8 @@ const AdminOverview: React.FC = () => {
                               percentage: percentage,
                               count: item.count
                             });
+                            // Add scale transform on hover
+                            e.currentTarget.style.transform = 'translate(160, 160) scale(1.05)';
                           }}
                           onMouseMove={(e) => {
                             const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect();
@@ -450,32 +457,18 @@ const AdminOverview: React.FC = () => {
                               });
                             }
                           }}
-                          onMouseLeave={() => setHoveredSector(null)}
+                          onMouseLeave={(e) => {
+                            setHoveredSector(null);
+                            // Reset scale on leave
+                            e.currentTarget.style.transform = 'translate(160, 160) scale(1)';
+                          }}
                         >
                           <path
-                            d={createPieSlice(startAngle, endAngle, centerX, centerY, radius)}
+                            d={createPieSlice(startAngle, endAngle, 0, 0, radius)}
                             fill={item.color}
-                            stroke="#0f172a"
-                            strokeWidth="2"
                             className="transition-all duration-300 group-hover:opacity-90 group-hover:brightness-110"
                             style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
                           />
-                          {/* Percentage label on slice */}
-                          {(percentage > 3 || sectorData.length === 1) && (
-                            <text
-                              x={labelX}
-                              y={labelY}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              className="text-white text-sm font-bold fill-white"
-                              style={{ 
-                                textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5)',
-                                pointerEvents: 'none'
-                              }}
-                            >
-                              {percentage.toFixed(1)}%
-                            </text>
-                          )}
                         </g>
                       );
                       
@@ -504,42 +497,14 @@ const AdminOverview: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
-                {/* Legend */}
-                <div className="w-full max-w-md mt-6">
-                  <div className="grid grid-cols-2 gap-3">
-                    {sectorData.map((item, index) => {
-                      const percentage = ((item.count / totalStartups) * 100).toFixed(1);
-                      return (
-                        <div 
-                          key={index} 
-                          className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700/30 transition-colors group"
-                        >
-                          <div 
-                            className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm"
-                            style={{ backgroundColor: item.color }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs text-gray-300 font-medium truncate group-hover:text-white transition-colors">
-                              {item.sector}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              {item.count} ({percentage}%)
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
               </div>
             )}
           </div>
         </Card>
 
         {/* Recent Notifications - Right */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6">
+        <Card className="p-6 flex flex-col" style={{ maxHeight: '500px' }}>
+          <div className="flex items-center justify-between mb-4 flex-shrink-0">
             <h2 className="text-xl font-semibold text-white flex items-center">
               <Bell className="h-5 w-5 mr-2" />
               Recent Notifications
@@ -567,7 +532,7 @@ const AdminOverview: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3 overflow-y-auto flex-1 pr-2" style={{ maxHeight: '380px' }}>
             {notifications.length === 0 ? (
               <div className="text-center py-8">
                 <Bell className="h-12 w-12 text-gray-400 mx-auto mb-3" />
@@ -578,7 +543,7 @@ const AdminOverview: React.FC = () => {
               notifications.map((notification) => (
                 <div 
                   key={notification.id} 
-                  className={`flex items-start space-x-3 p-3 rounded-lg transition-colors cursor-pointer ${
+                  className={`flex items-start space-x-2 p-2.5 rounded-lg transition-colors cursor-pointer ${
                     notification.read ? 'bg-gray-700/30' : 'bg-gray-700/50 border border-gray-600'
                   }`}
                   onClick={() => !notification.read && markAsRead(notification.id)}
@@ -611,14 +576,14 @@ const AdminOverview: React.FC = () => {
                     )}
                   </div>
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      deleteNotification(notification.id);
+                      await deleteNotification(notification.id);
                     }}
-                    className="text-gray-400 hover:text-red-400 transition-colors p-1"
+                    className="text-gray-400 hover:text-red-400 transition-colors p-1 flex-shrink-0"
                     title="Delete notification"
                   >
-                    <X className="h-3 w-3" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               ))
@@ -704,7 +669,6 @@ const AdminOverview: React.FC = () => {
                       <th className="text-left py-3 px-4 text-gray-300 font-medium">Type</th>
                       <th className="text-left py-3 px-4 text-gray-300 font-medium">Status</th>
                       <th className="text-left py-3 px-4 text-gray-300 font-medium">Submitted</th>
-                      <th className="text-left py-3 px-4 text-gray-300 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -735,44 +699,6 @@ const AdminOverview: React.FC = () => {
                         </td>
                         <td className="py-4 px-4 text-gray-300">
                           {new Date(startup.submissionDate).toLocaleDateString()}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center space-x-2">
-                            {startup.status === 'pending' && (
-                              <>
-                                <button 
-                                  onClick={() => handleApproveStartup(startup.id)}
-                                  disabled={updatingStatus === startup.id}
-                                  className="p-2 text-gray-400 hover:text-green-400 hover:bg-green-400/10 rounded-lg transition-colors disabled:opacity-50"
-                                  title="Approve startup"
-                                >
-                                  {updatingStatus === startup.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <CheckCircle className="h-4 w-4" />
-                                  )}
-                                </button>
-                                <button 
-                                  onClick={() => handleRejectStartup(startup.id)}
-                                  disabled={updatingStatus === startup.id}
-                                  className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors disabled:opacity-50"
-                                  title="Reject startup"
-                                >
-                                  {updatingStatus === startup.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <XCircle className="h-4 w-4" />
-                                  )}
-                                </button>
-                              </>
-                            )}
-                            <button 
-                              className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
-                              title="View details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                          </div>
                         </td>
                       </tr>
                     ))}

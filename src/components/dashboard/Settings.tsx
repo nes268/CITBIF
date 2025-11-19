@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
-import { Settings as SettingsIcon, Save, User, Target, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Settings as SettingsIcon, Save, User, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { profileApi } from '../../services/profileApi';
 import { useStartups } from '../../hooks/useStartups';
 import { startupsApi } from '../../services/startupsApi';
@@ -27,17 +27,16 @@ const Settings: React.FC = () => {
     phoneNumber: '',
     location: '',
   });
-  const [startupPhase, setStartupPhase] = useState<'idea' | 'seed' | 'series-a' | 'series-b' | 'series-c' | 'growth' | 'exit'>('idea');
+  const [startupPhase, setStartupPhase] = useState<'idea' | 'mvp' | 'seed' | 'series-a' | 'growth' | 'scale'>('idea');
   const [loading, setLoading] = useState(true);
 
   const phaseOptions = [
-    { value: 'idea', label: 'Idea Stage' },
-    { value: 'seed', label: 'Seed Stage' },
+    { value: 'idea', label: 'Idea' },
+    { value: 'mvp', label: 'MVP' },
+    { value: 'seed', label: 'Seed' },
     { value: 'series-a', label: 'Series A' },
-    { value: 'series-b', label: 'Series B' },
-    { value: 'series-c', label: 'Series C' },
-    { value: 'growth', label: 'Growth Stage' },
-    { value: 'exit', label: 'Exit Stage' }
+    { value: 'growth', label: 'Growth' },
+    { value: 'scale', label: 'Scale' }
   ];
 
   useEffect(() => {
@@ -377,13 +376,10 @@ const Settings: React.FC = () => {
 
         {/* Right Column - Startup Phase and Status */}
         <div className="flex flex-col h-full gap-6">
-          {/* Startup Phase */}
+          {/* Startup Stage */}
           <Card className="p-6 flex-shrink-0">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <Target className="h-5 w-5 text-cyan-400" />
-                <h2 className="text-xl font-semibold text-white">Startup Phase</h2>
-              </div>
+              <h2 className="text-xl font-semibold text-white">Startup Stage</h2>
               {phaseSaved && (
                 <div className="flex items-center space-x-2 text-emerald-400">
                   <CheckCircle className="h-5 w-5" />
@@ -394,7 +390,7 @@ const Settings: React.FC = () => {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Current Phase *</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Current Stage *</label>
                 <select
                   value={startupPhase}
                   onChange={(e) => setStartupPhase(e.target.value as typeof startupPhase)}
@@ -423,7 +419,7 @@ const Settings: React.FC = () => {
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Save Phase
+                    Save Stage
                   </>
                 )}
               </Button>

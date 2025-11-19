@@ -55,11 +55,25 @@ const Review: React.FC = () => {
   // Use dynamic applications from context
   const startups = applications;
 
+  // Normalize status for Review page display: map 'active' -> 'approved', 'dropout' -> 'rejected'
+  // Review page only shows: 'approved', 'rejected', or 'pending'
+  const normalizeStatusForReview = (status: string): 'approved' | 'rejected' | 'pending' => {
+    if (status === 'approved' || status === 'active') {
+      return 'approved';
+    }
+    if (status === 'rejected' || status === 'dropout') {
+      return 'rejected';
+    }
+    return 'pending';
+  };
+
   const filteredStartups = startups.filter(startup => {
     const matchesSearch = startup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          startup.founder.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          startup.sector.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || startup.status === filterStatus;
+    // Normalize status for filtering - compare normalized statuses
+    const normalizedStatus = normalizeStatusForReview(startup.status);
+    const matchesFilter = filterStatus === 'all' || normalizedStatus === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
@@ -148,7 +162,8 @@ const Review: React.FC = () => {
   // Review page shows actual status from database: 'approved', 'rejected', or 'pending'
   // This is different from other pages which normalize to 'active' or 'dropout'
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const normalizedStatus = normalizeStatusForReview(status);
+    switch (normalizedStatus) {
       case 'approved':
         return 'bg-green-900/30 text-green-400';
       case 'rejected':
@@ -161,7 +176,8 @@ const Review: React.FC = () => {
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    const normalizedStatus = normalizeStatusForReview(status);
+    switch (normalizedStatus) {
       case 'approved':
         return <CheckCircle className="h-4 w-4" />;
       case 'rejected':
@@ -216,7 +232,7 @@ const Review: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(selectedStartup.status)}
                       <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(selectedStartup.status)}`}>
-                        {selectedStartup.status}
+                        {normalizeStatusForReview(selectedStartup.status)}
                       </span>
                     </div>
                   </div>
@@ -230,7 +246,7 @@ const Review: React.FC = () => {
             </div>
 
             {/* Actions Sidebar */}
-            {selectedStartup.status === 'pending' && (
+            {normalizeStatusForReview(selectedStartup.status) === 'pending' && (
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-4">Review Actions</h3>
@@ -298,19 +314,19 @@ const Review: React.FC = () => {
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 rounded-full bg-yellow-500" />
             <span className="text-sm text-gray-400">
-              Pending: {startups.filter(s => s.status === 'pending').length}
+              Pending: {startups.filter(s => normalizeStatusForReview(s.status) === 'pending').length}
             </span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 rounded-full bg-green-500" />
             <span className="text-sm text-gray-400">
-              Approved: {startups.filter(s => s.status === 'approved').length}
+              Approved: {startups.filter(s => normalizeStatusForReview(s.status) === 'approved').length}
             </span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 rounded-full bg-red-500" />
             <span className="text-sm text-gray-400">
-              Rejected: {startups.filter(s => s.status === 'rejected').length}
+              Rejected: {startups.filter(s => normalizeStatusForReview(s.status) === 'rejected').length}
             </span>
           </div>
         </div>
@@ -388,7 +404,7 @@ const Review: React.FC = () => {
                   <div className="flex items-center space-x-1">
                     {getStatusIcon(startup.status)}
                     <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(startup.status)}`}>
-                      {startup.status}
+                      {normalizeStatusForReview(startup.status)}
                     </span>
                   </div>
                 </div>
@@ -410,7 +426,7 @@ const Review: React.FC = () => {
                   <Eye className="h-4 w-4 mr-1" />
                   Review
                 </Button>
-                {startup.status === 'pending' && (
+                {normalizeStatusForReview(startup.status) === 'pending' && (
                   <>
                     <Button 
                       size="sm" 
