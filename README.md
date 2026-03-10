@@ -1,6 +1,6 @@
-# Startup Incubation Platform (CITBIF)
+# StartupX
 
-A comprehensive full-stack web application for managing startup incubations, facilitating mentorship, investor connections, and document management for startups and administrators.
+A comprehensive application for managing startup incubations, facilitating mentorship, investor connections, and document management for startups and administrators.
 
 ## 🚀 Features
 
