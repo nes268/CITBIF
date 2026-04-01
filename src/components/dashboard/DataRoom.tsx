@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
+import { ModalPortal } from '../ui/ModalPortal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { Search, Upload, Download, Eye, Trash2, FileText, AlertCircle, Loader2, X } from 'lucide-react';
@@ -366,7 +367,7 @@ const DataRoom: React.FC = () => {
 
       {/* View Document Modal */}
       {showViewModal && selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4" style={{ paddingTop: '120px' }}>
+        <ModalPortal backdropClassName="bg-black/50">
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -449,7 +450,7 @@ const DataRoom: React.FC = () => {
               </div>
             </div>
           </Card>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

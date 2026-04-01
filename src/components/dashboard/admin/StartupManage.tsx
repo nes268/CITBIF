@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Card from '../../ui/Card';
+import { ModalPortal } from '../../ui/ModalPortal';
 import Button from '../../ui/Button';
 import Input from '../../ui/Input';
 import { Search, Filter, Building2, User, Mail, AlertCircle, Loader2, X, Phone, MapPin, Briefcase, FileText, DollarSign, Calendar, Users, Link as LinkIcon } from 'lucide-react';
@@ -362,7 +363,7 @@ const StartupManage: React.FC = () => {
 
       {/* Startup Details Modal */}
       {showProfileModal && selectedStartup && (
-        <div className="fixed inset-0 bg-black/30 flex items-start justify-center z-50 p-4" style={{ paddingTop: '120px' }}>
+        <ModalPortal>
           <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -685,7 +686,7 @@ const StartupManage: React.FC = () => {
               ) : null}
             </div>
           </Card>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Card from '../ui/Card';
+import { ModalPortal } from '../ui/ModalPortal';
 import Button from '../ui/Button';
 import { TrendingUp, Edit, CheckCircle, Clock } from 'lucide-react';
 import { useFunding } from '../../context/FundingContext';
@@ -219,7 +220,7 @@ const Fundraising: React.FC = () => {
 
       {/* Edit Form Modal */}
       {showEditForm && editingStage && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4" style={{ paddingTop: '120px' }}>
+        <ModalPortal backdropClassName="bg-black/50">
           <Card className="p-6 max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[var(--text)]">
@@ -274,7 +275,7 @@ const Fundraising: React.FC = () => {
               </div>
             </form>
           </Card>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

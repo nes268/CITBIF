@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import Card from '../ui/Card';
+import { ModalPortal } from '../ui/ModalPortal';
 import Button from '../ui/Button';
 import { Presentation as PresentationChart, Upload, FileText, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -211,14 +212,11 @@ const PitchDeck: React.FC = () => {
 
       {/* Upload Form Modal */}
       {showUploadForm && (
-        <div 
-          className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4"
-          style={{ paddingTop: '120px' }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowUploadForm(false);
-              setSelectedTemplate(null);
-            }
+        <ModalPortal
+          backdropClassName="bg-black/50"
+          onBackdropClick={() => {
+            setShowUploadForm(false);
+            setSelectedTemplate(null);
           }}
         >
           <Card className="p-6 max-w-md w-full">
@@ -313,7 +311,7 @@ const PitchDeck: React.FC = () => {
               </Button>
             </div>
           </Card>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

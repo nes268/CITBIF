@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, useMotionValue, useSpring, useTransform, MotionValue } from 'framer-motion';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const DOT_COUNT = 12;
@@ -159,12 +160,15 @@ const Header: React.FC = () => {
           {user?.role === 'admin' ? 'Admin' : user?.fullName || user?.username}
         </span>
         <motion.button
+          type="button"
           onClick={handleLogout}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="px-5 py-2.5 rounded-xl text-sm font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white transition-all hover:shadow-lg hover:shadow-[var(--accent)]/25"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] text-white transition-all hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent)]/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
+          aria-label="Log out"
+          title="Log out"
         >
-          Logout
+          <LogOut className="h-5 w-5" strokeWidth={2} aria-hidden />
         </motion.button>
       </div>
     </header>
