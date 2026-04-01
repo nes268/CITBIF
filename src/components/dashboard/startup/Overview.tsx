@@ -67,59 +67,78 @@ const StartupStageCard: React.FC<{ phase: string }> = ({ phase }) => {
   const stepIdx = PHASE_STEPS.findIndex((s) => s.key === phase);
   const PhaseIcon = PHASE_ICONS[phase] ?? Layers;
   const phaseHint = PHASE_HINTS[phase] ?? '';
+  const progressLabel =
+    stepIdx >= 0 ? `Stage ${stepIdx + 1} of ${PHASE_STEPS.length}` : 'Stage';
 
   return (
-    <Card className="flex h-full min-h-0 flex-col p-4 relative overflow-hidden">
+    <Card className="relative flex h-full min-h-0 flex-col overflow-hidden p-4">
       <div
-        className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-[var(--accent)]/[0.12] blur-2xl"
+        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[var(--accent)]/[0.1] blur-2xl"
         aria-hidden
       />
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <h2 className="mb-4 shrink-0 text-lg font-semibold text-[var(--text)]">Startup Stage</h2>
-
-        <div className="mb-2.5 flex flex-wrap items-center gap-1" role="list" aria-label="Stage roadmap">
-          {PHASE_STEPS.map((step, i) => {
-            const isCurrent = stepIdx === i;
-            const isPast = stepIdx > i;
-            return (
-              <span key={step.key} role="listitem" className="contents">
-                {i > 0 && (
-                  <span
-                    className={`mx-0.5 h-px w-3 shrink-0 rounded-full sm:w-4 ${
-                      isPast ? 'bg-emerald-500/50' : isCurrent ? 'bg-[var(--accent)]/45' : 'bg-[var(--border)]'
-                    }`}
-                    aria-hidden
-                  />
-                )}
-                <span
-                  className={`rounded px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide transition-colors ${
-                    isCurrent
-                      ? 'bg-[var(--accent)]/18 text-[var(--accent)] ring-1 ring-[var(--accent)]/35 shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset]'
-                      : isPast
-                        ? 'bg-emerald-500/10 text-emerald-700/90'
-                        : 'bg-[var(--bg-muted)] text-[var(--text-subtle)]'
-                  }`}
-                >
-                  {step.label}
-                </span>
-              </span>
-            );
-          })}
+        <div className="mb-3 flex shrink-0 items-start justify-between gap-2">
+          <h2 className="text-lg font-semibold text-[var(--text)]">Startup Stage</h2>
+          <span className="rounded-full border border-[var(--border-muted)] bg-[var(--bg-muted)] px-2 py-0.5 text-[10px] font-medium tabular-nums text-[var(--text-muted)]">
+            {progressLabel}
+          </span>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-[var(--accent)]/20 bg-gradient-to-br from-[var(--accent)]/[0.08] via-transparent to-violet-500/[0.06] p-3 shadow-[0_1px_0_rgba(255,255,255,0.06)_inset]">
-          <div className="flex items-start gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/25">
-              <PhaseIcon className="h-4 w-4" strokeWidth={2.25} />
+        <div
+          className="mb-3 rounded-xl border border-[var(--border-muted)] bg-[var(--bg-muted)]/45 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+          role="list"
+          aria-label="Stage roadmap"
+        >
+          <p className="mb-2 px-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-subtle)]">
+            Journey
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {PHASE_STEPS.map((step, i) => {
+              const isCurrent = stepIdx === i;
+              const isPast = stepIdx > i;
+              return (
+                <span
+                  key={step.key}
+                  role="listitem"
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+                    isCurrent
+                      ? 'bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/30 shadow-sm'
+                      : isPast
+                        ? 'bg-[var(--bg-card)] text-[var(--text-muted)] ring-1 ring-[var(--border-muted)]'
+                        : 'bg-[var(--bg-card)]/40 text-[var(--text-subtle)] ring-1 ring-transparent'
+                  }`}
+                >
+                  {isPast && (
+                    <CheckCircle className="h-3 w-3 shrink-0 text-[var(--accent)] opacity-80" aria-hidden />
+                  )}
+                  {step.label}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-[var(--border-muted)] bg-gradient-to-br from-[var(--accent)]/[0.07] via-[var(--bg-muted)]/30 to-transparent p-3 shadow-[0_1px_0_rgba(255,255,255,0.05)_inset] ring-1 ring-[var(--accent)]/10">
+          <div className="flex gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/18 text-[var(--accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] ring-1 ring-[var(--accent)]/22">
+              <PhaseIcon className="h-5 w-5" strokeWidth={2.1} />
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Current Stage</p>
-              <p className="mt-0.5 text-lg font-bold tracking-tight text-[var(--text)]">{formatPhaseLabel(phase)}</p>
-              {phaseHint && (
-                <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-muted)]">{phaseHint}</p>
-              )}
+            <div className="min-w-0 flex-1 pt-0.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                Current stage
+              </p>
+              <p className="mt-1 text-xl font-bold leading-none tracking-tight text-[var(--text)]">
+                {formatPhaseLabel(phase)}
+              </p>
             </div>
           </div>
+          {phaseHint && (
+            <div className="mt-3 rounded-lg border border-[var(--border-muted)]/80 bg-[var(--bg-card)]/60 py-2.5 pl-3 pr-2.5">
+              <p className="border-l-2 border-[var(--accent)]/45 pl-2.5 text-xs leading-relaxed text-[var(--text-muted)]">
+                {phaseHint}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </Card>
@@ -273,14 +292,28 @@ const Overview: React.FC = () => {
             {alerts.length} upcoming alerts
           </div>
         </div>
-        
-        {alerts.length === 0 ? (
-          <div className="text-center py-8">
-            <AlertCircle className="h-12 w-12 text-[var(--text-subtle)] mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-[var(--text-muted)] mb-2">No upcoming alerts</h3>
-            <p className="text-[var(--text-muted)]">Alerts will appear here when admin actions occur</p>
+
+        {/* Demo UI: acceptance notice (not wired to backend) */}
+        <div
+          className="mb-4 flex gap-3 rounded-xl border border-[var(--border-muted)] bg-[var(--bg-muted)] p-4 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]"
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] ring-1 ring-[var(--accent)]/20"
+            aria-hidden
+          >
+            <CheckCircle className="h-5 w-5" strokeWidth={2.25} />
+          </span>
+          <div className="min-w-0">
+            <p className="font-semibold text-[var(--text)]">Your application has been accepted</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--text-muted)]">
+              Welcome to the program—you can track milestones, alerts, and next steps from this dashboard.
+            </p>
           </div>
-        ) : (
+        </div>
+
+        {alerts.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {alerts.map((alert) => (
               <div key={alert.id} className="bg-[var(--bg-muted)] rounded-xl p-4 border border-[var(--border-muted)] hover:border-[var(--border)] transition-colors">
@@ -306,11 +339,11 @@ const Overview: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 {alert.description && (
                   <p className="text-sm text-[var(--text-muted)] mb-2">{alert.description}</p>
                 )}
-                
+
                 <div className="flex items-center justify-between mt-3">
                   <span className={`text-xs px-2 py-1 rounded-full border ${getPriorityColor(alert.priority)}`}>
                     {alert.priority}
