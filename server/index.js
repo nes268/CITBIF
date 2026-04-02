@@ -253,6 +253,47 @@ const Startup = mongoose.model('Startup', startupSchema);
 const UserNotification = mongoose.model('UserNotification', userNotificationSchema);
 const AdminNotification = mongoose.model('AdminNotification', adminNotificationSchema);
 
+/**
+ * When a founder updates their Profile, mirror listing fields on the linked Startup
+ * so admin dashboards and review screens stay in sync without a separate edit flow.
+ */
+async function syncStartupListingFromProfile(profileDoc) {
+  if (!profileDoc?.userId) return;
+  const startup = await Startup.findOne({ userId: profileDoc.userId });
+  if (!startup) return;
+
+  let changed = false;
+  if (typeof profileDoc.email === 'string' && profileDoc.email.trim() && profileDoc.email.trim() !== startup.email) {
+    startup.email = profileDoc.email.trim();
+    changed = true;
+  }
+  const founderStr = [profileDoc.fullName, profileDoc.founderName].find(
+    (v) => typeof v === 'string' && v.trim()
+  );
+  if (founderStr && founderStr.trim() !== startup.founder) {
+    startup.founder = founderStr.trim();
+    changed = true;
+  }
+  if (typeof profileDoc.startupName === 'string' && profileDoc.startupName.trim() && profileDoc.startupName.trim() !== startup.name) {
+    startup.name = profileDoc.startupName.trim();
+    changed = true;
+  }
+  if (typeof profileDoc.sector === 'string' && profileDoc.sector.trim() && profileDoc.sector.trim() !== startup.sector) {
+    startup.sector = profileDoc.sector.trim();
+    changed = true;
+  }
+  if (profileDoc.applicationType === 'innovation' || profileDoc.applicationType === 'incubation') {
+    if (profileDoc.applicationType !== startup.type) {
+      startup.type = profileDoc.applicationType;
+      changed = true;
+    }
+  }
+  if (changed) {
+    startup.updatedAt = new Date();
+    await startup.save();
+  }
+}
+
 /** Notify every user linked to an approved/active startup (program participants). */
 async function notifyApprovedStartupUsers(message, notificationType) {
   try {
@@ -1093,111 +1134,31 @@ app.get('/api/investors', async (req, res) => {
   }
 });
 
-// POST request intro to investor (must be before /:id route)
+// POST request intro to investor (must be before /:id route). No outbound email — UI success only.
 app.post('/api/investors/request-intro', async (req, res) => {
   try {
-    const { investorEmail, startupName, requesterEmail, requesterName, message } = req.body;
+    const { investorEmail, startupName, requesterEmail, requesterName } = req.body;
 
-    // Validation
     if (!investorEmail || !startupName || !requesterEmail || !requesterName) {
-      return res.status(400).json({ error: 'Investor email, startup name, requester email, and requester name are required' });
-    }
-
-    // Find investor to get their name
-    const investor = await Investor.findOne({ email: investorEmail });
-    if (!investor) {
-      return res.status(404).json({ error: 'Investor not found' });
-    }
-
-    // Configure nodemailer transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER || process.env.EMAIL_USER,
-        pass: process.env.SMTP_PASS || process.env.EMAIL_PASSWORD,
-      },
-    });
-
-    // If no email credentials are configured, return a helpful error
-    if (!process.env.SMTP_USER && !process.env.EMAIL_USER) {
-      console.warn('Email credentials not configured. Please set SMTP_USER and SMTP_PASS environment variables.');
-      // For development, you can still return success but log the email content
-      console.log('Email would be sent with the following content:');
-      console.log('To:', investorEmail);
-      console.log('Subject: Introduction Request from', startupName);
-      console.log('Body:', {
-        investorName: investor.name,
-        startupName,
-        requesterEmail,
-        requesterName,
-        message
-      });
-      
-      return res.status(200).json({ 
-        message: 'Intro request logged (email not configured). Please configure SMTP settings for production.',
-        logged: true
+      return res.status(400).json({
+        error: 'Investor email, startup name, requester email, and requester name are required',
       });
     }
 
-    // Email content
-    const emailSubject = `Introduction Request from ${startupName}`;
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #06b6d4;">New Introduction Request</h2>
-        <p>Hello ${investor.name},</p>
-        <p>You have received a new introduction request:</p>
-        
-        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #1f2937; margin-top: 0;">Request Details</h3>
-          <p><strong>Startup Name:</strong> ${startupName}</p>
-          <p><strong>Requested By:</strong> ${requesterName}</p>
-          <p><strong>Contact Email:</strong> ${requesterEmail}</p>
-          ${message ? `<p><strong>Message:</strong><br>${message.replace(/\n/g, '<br>')}</p>` : ''}
-        </div>
-        
-        <p>Please review this request and respond to ${requesterEmail} at your earliest convenience.</p>
-        
-        <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-          This is an automated message from the CITBIF Dashboard.
-        </p>
-      </div>
-    `;
+    const toEmail = String(investorEmail).trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
+      return res.status(400).json({ error: 'Invalid investor email address' });
+    }
 
-    const emailText = `
-New Introduction Request
-
-Hello ${investor.name},
-
-You have received a new introduction request:
-
-Startup Name: ${startupName}
-Requested By: ${requesterName}
-Contact Email: ${requesterEmail}
-${message ? `Message: ${message}` : ''}
-
-Please review this request and respond to ${requesterEmail} at your earliest convenience.
-
-This is an automated message from the CITBIF Dashboard.
-    `;
-
-    // Send email
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER || process.env.EMAIL_USER,
-      to: investorEmail,
-      subject: emailSubject,
-      text: emailText,
-      html: emailHtml
-    });
-
-    res.status(200).json({ 
-      message: 'Introduction request email sent successfully',
-      sent: true
+    res.status(200).json({
+      message: 'Request submitted successfully',
+      sent: true,
     });
   } catch (error) {
-    console.error('Error sending intro request email:', error);
-    res.status(500).json({ error: 'Server error while sending intro request email' });
+    console.error('Error in request-intro:', error);
+    res.status(500).json({
+      error: 'Could not submit request: ' + (error.message || 'unknown error'),
+    });
   }
 });
 
@@ -2211,6 +2172,8 @@ app.post('/api/profiles', async (req, res) => {
       await profile.save();
     }
 
+    await syncStartupListingFromProfile(profile);
+
     // Don't update profileComplete here - it will be set when startup is approved
     // The profile is saved but pending admin approval
 
@@ -2243,6 +2206,8 @@ app.put('/api/profiles/:id', async (req, res) => {
     Object.assign(profile, updateData);
     profile.updatedAt = new Date();
     await profile.save();
+
+    await syncStartupListingFromProfile(profile);
 
     res.status(200).json({
       id: profile._id.toString(),

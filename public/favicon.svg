@@ -1,10 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="8" fill="#4F46E5"/>
-  <path fill="#ffffff" d="M9 25V14l7-3.5 7 3.5v11H9z"/>
-  <rect x="11" y="15.5" width="2.5" height="2.5" rx="0.45" fill="#4F46E5"/>
-  <rect x="14.75" y="15.5" width="2.5" height="2.5" rx="0.45" fill="#4F46E5"/>
-  <rect x="18.5" y="15.5" width="2.5" height="2.5" rx="0.45" fill="#4F46E5"/>
-  <rect x="11" y="19" width="2.5" height="2.5" rx="0.45" fill="#4F46E5"/>
-  <rect x="18.5" y="19" width="2.5" height="2.5" rx="0.45" fill="#4F46E5"/>
-  <rect x="14" y="21" width="4" height="4" rx="0.5" fill="#4F46E5"/>
+  <rect width="32" height="32" rx="7" fill="#FFFFFF"/>
+  <g transform="rotate(-14 16 15.5)">
+    <!-- Upper-left wing (orange / red facets) -->
+    <polygon fill="#FB923C" points="16,10 9.2,7.2 11.8,11.4"/>
+    <polygon fill="#F97316" points="16,10 11.8,11.4 9.5,14.8"/>
+    <polygon fill="#EA580C" points="16,10 9.5,14.8 13.6,15.6"/>
+    <polygon fill="#EF4444" points="16,10 13.6,15.6 15.2,12.2"/>
+    <!-- Upper-right wing -->
+    <polygon fill="#FB923C" points="16,10 22.8,7.2 20.2,11.4"/>
+    <polygon fill="#F97316" points="16,10 20.2,11.4 22.5,14.8"/>
+    <polygon fill="#EA580C" points="16,10 22.5,14.8 18.4,15.6"/>
+    <polygon fill="#EF4444" points="16,10 18.4,15.6 16.8,12.2"/>
+    <!-- Lower-left wing (magenta / burgundy) -->
+    <polygon fill="#DB2777" points="15.2,11.5 10.2,16.2 12.8,20.5"/>
+    <polygon fill="#BE185D" points="15.2,11.5 12.8,20.5 15.8,22.8"/>
+    <polygon fill="#9D174D" points="15.2,11.5 15.8,22.8 17.2,18"/>
+    <polygon fill="#C026D3" points="15.2,11.5 17.2,18 16.2,14"/>
+    <!-- Lower-right wing -->
+    <polygon fill="#DB2777" points="16.8,11.5 21.8,16.2 19.2,20.5"/>
+    <polygon fill="#BE185D" points="16.8,11.5 19.2,20.5 16.2,22.8"/>
+    <polygon fill="#9D174D" points="16.8,11.5 16.2,22.8 14.8,18"/>
+    <polygon fill="#C026D3" points="16.8,11.5 14.8,18 15.8,14"/>
+    <!-- Head / body square -->
+    <rect x="14.35" y="8.25" width="3.3" height="3.3" rx="0.35" fill="#A21CAF" transform="rotate(12 16 9.9)"/>
+  </g>
 </svg>

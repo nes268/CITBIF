@@ -1,303 +1,201 @@
 # CITBIF
 
-A comprehensive full-stack web application for managing startup incubations, facilitating mentorship, investor connections, and document management for startups and administrators.
+Full-stack platform for an incubation program: founders submit applications and run their startup workspace; administrators review applicants, manage the portfolio, and operate shared services (mentors, investors, events, documents).
 
-## 🚀 Features
+**How data stays aligned:** Saving a profile updates the linked **Startup** record where it matters for admin lists (name, founder, email, sector, program type). Founders set **current stage** (idea → scale) in **Settings**; that value is stored on **Startup** and appears in admin review and startup detail views. Admin screens refresh periodically and when you return to the tab so you see recent founder changes without reloading the app.
 
-### For Startups
-- **Profile Wizard**: Multi-step profile setup with document upload
-- **Dashboard**: Overview of startup status, applications, and progress
-- **Document Management**: Upload and manage business documents, pitch decks, and traction data
-- **Mentor Matching**: Connect with mentors and schedule sessions
-- **Investor Network**: Browse and connect with potential investors
-- **Pitch Deck Builder**: Create professional pitch decks using templates
-- **Fundraising**: Track funding goals and progress
-- **Calendar**: Manage events and important dates
+---
 
-### For Administrators
-- **Startup Management**: Review, approve, or reject startup applications
-- **Mentor Management**: Add, edit, and manage mentors
-- **Investor Management**: Manage investor profiles and information
-- **Document Review**: Access and review all startup documents
-- **Event Management**: Create and manage incubation events
-- **Analytics Dashboard**: Overview of platform statistics
+## Features
 
-## 🛠️ Tech Stack
+### Founders (dashboard)
 
-### Frontend
-- **React 18** - UI library
-- **TypeScript** - Type safety
-- **Vite** - Build tool and dev server
-- **Tailwind CSS** - Styling
-- **React Router** - Navigation
-- **Lucide React** - Icons
+- **Profile wizard** — Multi-step onboarding (personal, company, incubation history, documents, pitch/traction, funding).
+- **Overview & workspace** — Status, stage, and program context.
+- **Data room** — Upload and organize documents.
+- **Mentors** — Directory and session requests.
+- **Investors** — Directory and intro requests.
+- **Pitch deck & fundraising** — Deck tooling and funding progress (UI state).
+- **Calendar** — Events.
+- **Settings** — Personal details, startup stage, dropout/active status where applicable.
 
-### Backend
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **MongoDB** - Database
-- **Mongoose** - ODM for MongoDB
-- **Multer** - File upload handling
-- **bcryptjs** - Password hashing
+**Access rules:** Users need a linked startup from onboarding. Pending or rejected applications see a holding state until approved (then full dashboard).
 
-## 📋 Prerequisites
+### Administrators
 
-Before you begin, ensure you have the following installed:
-- **Node.js** (v18 or higher)
-- **npm** or **yarn**
-- **MongoDB** (local installation or MongoDB Atlas account)
+- **Dashboard** — Metrics and startup overview; data refreshes on a timer and when the browser tab becomes visible.
+- **Review** — Application list and per-startup detail (summary, full profile tabs, startup stage, approve/reject).
+- **Startup management** — Approved portfolio; modal with startup basics (including **current stage**) and full profile.
+- **Data room (admin)** — Browse startups and their files.
+- **Mentors / investors / events** — CRUD-style management and directory maintenance.
+- **Notifications** — Separate feeds for admins and founders (e.g. approvals, intros, rejections).
 
-## 🔧 Installation & Setup
+---
 
-### 1. Clone the Repository
+## Tech stack
+
+| Layer | Technologies |
+|--------|----------------|
+| Frontend | React 18, TypeScript, Vite, React Router, Tailwind CSS, Lucide icons |
+| Backend | Node.js, Express, MongoDB, Mongoose |
+| Uploads | Multer (`server/uploads`) |
+| Auth | bcrypt-hashed accounts; role-based **admin** vs **user** |
+
+---
+
+## Prerequisites
+
+- Node.js 18+
+- npm (or yarn)
+- MongoDB (local or Atlas)
+
+---
+
+## Setup
+
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/Keerthana-R786/startup.git
 cd startup
 ```
 
-### 2. Backend Setup
-
-Navigate to the server directory:
+**Backend**
 
 ```bash
 cd server
-```
-
-Install dependencies:
-
-```bash
 npm install
 ```
 
-Create a `.env` file in the `server` directory:
+Create `server/.env`:
 
 ```env
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/citbif
 ```
 
-**Note**: If using MongoDB Atlas or a different MongoDB instance, update the `MONGODB_URI` accordingly.
-
-Start the backend server:
+Start API:
 
 ```bash
-# Production mode
 npm start
-
-# Development mode (with auto-reload)
+# or
 npm run dev
 ```
 
-The backend server will run on `http://localhost:5000`
+API base: `http://localhost:5000` (use `/api/health` to verify).
 
-### 3. Frontend Setup
-
-Return to the root directory:
+**Frontend** (from repo root)
 
 ```bash
 cd ..
-```
-
-Install dependencies:
-
-```bash
 npm install
 ```
 
-Create a `.env` file in the root directory:
+Create `.env` in the project root:
 
 ```env
 VITE_API_URL=http://localhost:5000
 ```
 
-Start the development server:
-
 ```bash
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173` (or the port shown in terminal)
+App URL is printed by Vite (typically `http://localhost:5173`).
 
-### 4. Database Setup
+### 2. MongoDB
 
-Ensure MongoDB is running on your system. The application will automatically create the necessary collections:
-- `admins` - Admin users
-- `users` - Regular users
-- `profiles` - User profiles
-- `startups` - Startup information
-- `documents` - Uploaded documents
-- `mentors` - Mentor profiles
-- `investors` - Investor profiles
-- `events` - Events and calendar items
-- `notifications` - User notifications
-
-## 📁 Project Structure
-
-```
-startup/
-├── server/                 # Backend server
-│   ├── index.js            # Express server setup
-│   ├── package.json        # Backend dependencies
-│   ├── uploads/            # Uploaded files directory
-│   └── README.md           # Backend documentation
-│
-├── src/                    # Frontend source code
-│   ├── components/         # React components
-│   │   ├── auth/           # Authentication components
-│   │   ├── dashboard/     # Dashboard components
-│   │   ├── layout/         # Layout components
-│   │   ├── profile/        # Profile wizard components
-│   │   └── ui/             # Reusable UI components
-│   │
-│   ├── context/            # React context providers
-│   ├── hooks/              # Custom React hooks
-│   ├── services/           # API service functions
-│   ├── types/              # TypeScript type definitions
-│   ├── App.tsx             # Main app component
-│   └── main.tsx            # Entry point
-│
-├── package.json            # Frontend dependencies
-├── vite.config.ts          # Vite configuration
-├── tailwind.config.js      # Tailwind CSS configuration
-├── tsconfig.json           # TypeScript configuration
-└── README.md               # This file
-```
-
-## 🎯 Usage
-
-### First Time Setup
-
-1. **Start MongoDB**: Ensure MongoDB is running on your system
-2. **Start Backend**: Run `cd server && npm start`
-3. **Start Frontend**: Run `npm run dev` from root directory
-4. **Access Application**: Open `http://localhost:5173` in your browser
-
-### Creating an Admin Account
-
-1. Navigate to the signup page
-2. Select "Admin" role
-3. Fill in your details and submit
-4. You'll be redirected to the admin dashboard
-
-### Creating a Startup Account
-
-1. Navigate to the signup page
-2. Select "User" role
-3. Fill in your details and submit
-4. Complete the profile wizard:
-   - Personal Information
-   - Enterprise Information
-   - Incubation Details
-   - Documentation Upload
-   - Pitch Deck & Traction
-   - Funding Information
-5. Submit for admin review
-6. Wait for approval to access the dashboard
-
-## 🔌 API Endpoints
-
-### Authentication
-- `POST /api/auth/signup` - User registration
-- `POST /api/auth/login` - User login
-
-### Documents
-- `POST /api/documents/upload` - Upload document
-- `GET /api/documents` - Get all documents
-- `GET /api/documents/user/:userId` - Get user documents
-- `GET /api/documents/:id` - Get document by ID
-- `DELETE /api/documents/:id` - Delete document
-
-### Profiles
-- `POST /api/profiles` - Create/update profile
-- `GET /api/profiles/user/:userId` - Get user profile
-
-### Startups
-- `GET /api/startups` - Get all startups
-- `POST /api/startups` - Create startup
-- `PUT /api/startups/:id` - Update startup
-- `GET /api/startups/user/:userId` - Get user's startup
-
-### Mentors
-- `GET /api/mentors` - Get all mentors
-- `POST /api/mentors` - Create mentor
-- `PUT /api/mentors/:id` - Update mentor
-- `DELETE /api/mentors/:id` - Delete mentor
-
-### Investors
-- `GET /api/investors` - Get all investors
-- `POST /api/investors` - Create investor
-- `PUT /api/investors/:id` - Update investor
-- `DELETE /api/investors/:id` - Delete investor
-
-### Events
-- `GET /api/events` - Get all events
-- `POST /api/events` - Create event
-- `PUT /api/events/:id` - Update event
-- `DELETE /api/events/:id` - Delete event
-
-## 🧪 Development
-
-### Running in Development Mode
-
-**Backend:**
-```bash
-cd server
-npm run dev
-```
-
-**Frontend:**
-```bash
-npm run dev
-```
-
-### Building for Production
-
-**Frontend:**
-```bash
-npm run build
-```
-
-The production build will be in the `dist` directory.
-
-**Backend:**
-```bash
-cd server
-npm start
-```
-
-## 📝 Environment Variables
-
-### Backend (.env in server/)
-```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/citbif
-```
-
-### Frontend (.env in root/)
-```env
-VITE_API_URL=http://localhost:5000
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the ISC License.
-
-
-
-## 📞 Support
-
-For support, please open an issue in the GitHub repository or contact the development team.
+With `MONGODB_URI` set, collections are created as models are used, for example: `users`, `admins`, `profiles`, `startups`, `documents`, `mentors`, `investors`, `events`, `reports`, `usernotifications`, `adminnotifications`.
 
 ---
 
-**Note**: Make sure MongoDB is running before starting the backend server. For production deployment, update the environment variables accordingly and ensure proper security measures are in place.
+## Project layout
 
+```
+startup/
+├── server/
+│   ├── index.js       # Express app, routes, sync helpers
+│   ├── uploads/       # Stored uploads
+│   └── package.json
+├── src/
+│   ├── components/    # auth, dashboard (startup + admin), profile, layout, ui
+│   ├── context/       # Auth, applications, notifications, funding, alerts
+│   ├── hooks/         # e.g. useStartups
+│   ├── services/      # REST clients
+│   ├── types/
+│   ├── App.tsx
+│   └── main.tsx
+├── package.json
+├── vite.config.ts
+├── tailwind.config.js
+└── README.md
+```
+
+---
+
+## Usage (quick)
+
+1. Start MongoDB, then the **server**, then **Vite**.
+2. **Signup** — Choose **Admin** or **User**.
+3. **Founder** — Complete **Profile wizard**; wait for approval if required, then use the dashboard.
+4. **Admin** — Use **Review** to approve/reject; use **Startup management** and other admin pages for ongoing operations.
+
+---
+
+## API (overview)
+
+All routes are under `/api` unless noted.
+
+| Area | Examples |
+|------|-----------|
+| Auth | `POST /api/auth/signup`, `POST /api/auth/login` |
+| Profiles | `GET /api/profiles/user/:userId`, `POST /api/profiles`, `PUT /api/profiles/:id` |
+| Startups | `GET /api/startups`, `GET /api/startups/:id`, `POST /api/startups`, `PUT /api/startups/:id`, `PUT /api/startups/phase/:userId`, `POST .../approve`, `POST .../reject` |
+| Documents | Upload/list/by user/by startup/delete |
+| Mentors & events | CRUD + `POST /api/mentors/request-session` |
+| Investors       | CRUD + `POST /api/investors/request-intro` |
+| Reports         | List/create/update/delete + download helpers |
+| Notifications   | User and admin list/read/unread-count/delete |
+
+For exact payloads, inspect `server/index.js` or the `src/services/*Api.ts` callers.
+
+---
+
+## Scripts
+
+| Location | Command | Purpose |
+|----------|---------|---------|
+| Root | `npm run dev` | Vite dev server |
+| Root | `npm run build` | Production build → `dist/` |
+| Root | `npm run preview` | Preview production build |
+| `server/` | `npm start` | Run API |
+| `server/` | `npm run dev` | API with `node --watch` reload |
+
+---
+
+## Environment variables
+
+**`server/.env`**
+
+- `PORT` — API port (default 5000).
+- `MONGODB_URI` — Mongo connection string.
+
+**Root `.env`**
+
+- `VITE_API_URL` — Base URL of the API (e.g. `http://localhost:5000`).
+
+---
+
+## Production notes
+
+Point `VITE_API_URL` at your deployed API, set a strong `MONGODB_URI`, and serve the Vite `dist` output behind HTTPS. Restrict CORS and protect admin routes appropriately for your deployment.
+
+---
+
+## License
+
+ISC (see repository).
+
+## Contributing
+
+Fork, branch, open a PR with a clear description of behavior changes.

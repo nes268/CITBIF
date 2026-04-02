@@ -73,8 +73,8 @@ const CITBIFLogo: React.FC = () => {
         <LogoDot key={i} index={i} smoothX={smoothX} smoothY={smoothY} />
       ))}
       <motion.span
-        className="relative z-10 text-2xl font-extrabold text-[var(--accent)] tracking-[-0.02em] drop-shadow-[0_2px_8px_rgba(79,70,229,0.28)]"
-        animate={{ scale: isHovered ? 1.02 : 1 }}
+        className="citbif-wordmark relative z-10 text-[1.625rem] leading-none select-none"
+        animate={{ scale: isHovered ? 1.03 : 1 }}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       >
         CITBIF
@@ -122,8 +122,16 @@ const Header: React.FC = () => {
 
   return (
     <header className="h-[72px] min-h-[72px] bg-[linear-gradient(120deg,rgba(255,255,255,0.96)_0%,rgba(238,242,255,0.95)_45%,rgba(239,246,255,0.95)_100%)] backdrop-blur-xl border border-[var(--accent-muted-border)]/70 flex items-center justify-between px-6 lg:px-8 sticky top-4 z-10 mx-4 lg:mx-6 rounded-2xl shadow-[0_10px_34px_-14px_rgba(79,70,229,0.28),0_6px_20px_-10px_rgba(59,130,246,0.2)] before:content-[''] before:absolute before:inset-x-3 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-[rgba(99,102,241,0.45)] before:to-transparent before:pointer-events-none before:rounded-full relative overflow-hidden">
-      {/* Logo with mouse-following dots */}
-      <div className="flex items-center">
+      {/* Butterfly mark + wordmark */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        <img
+          src="/favicon.png"
+          alt=""
+          width={40}
+          height={40}
+          className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 object-contain select-none pointer-events-none drop-shadow-[0_2px_8px_rgba(79,70,229,0.15)]"
+          aria-hidden
+        />
         <CITBIFLogo />
       </div>
 

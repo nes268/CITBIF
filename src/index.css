@@ -76,6 +76,33 @@ body {
   background-attachment: fixed;
 }
 
+/* Brand wordmark — Outfit (compact), tight tracking, indigo gradient */
+.citbif-wordmark {
+  font-family: 'Outfit', 'Manrope', system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  font-feature-settings: 'kern' 1;
+  text-transform: uppercase;
+  line-height: 1;
+  background: linear-gradient(
+    122deg,
+    #4338ca 0%,
+    var(--accent) 38%,
+    #4f6ae8 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 10px rgba(79, 70, 229, 0.18));
+}
+
+.citbif-wordmark--sidebar {
+  font-size: 1.125rem;
+  letter-spacing: -0.03em;
+  filter: drop-shadow(0 1px 6px rgba(79, 70, 229, 0.12));
+}
+
 #root {
   background-color: transparent;
   min-height: 100vh;

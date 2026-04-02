@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Card from '../../ui/Card';
 import { 
   TrendingUp, 
@@ -85,8 +86,6 @@ const StartupStageCard: React.FC<{ phase: string }> = ({ phase }) => {
   const stepIdx = PHASE_STEPS.findIndex((s) => s.key === phase);
   const PhaseIcon = PHASE_ICONS[phase] ?? Layers;
   const phaseHint = PHASE_HINTS[phase] ?? '';
-  const progressLabel =
-    stepIdx >= 0 ? `Stage ${stepIdx + 1} of ${PHASE_STEPS.length}` : 'Stage';
 
   return (
     <Card className="relative flex h-full min-h-0 flex-col overflow-hidden p-4">
@@ -106,21 +105,11 @@ const StartupStageCard: React.FC<{ phase: string }> = ({ phase }) => {
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
         <motion.div
-          className="mb-3 flex shrink-0 items-start justify-between gap-2"
+          className="mb-3 flex shrink-0 items-start gap-2"
           layout
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
           <h2 className="text-lg font-semibold text-[var(--text)]">Startup Stage</h2>
-          <motion.span
-            layout
-            className="rounded-full border border-[var(--border-muted)] bg-[var(--bg-muted)] px-2 py-0.5 text-[10px] font-medium tabular-nums text-[var(--text-muted)]"
-            key={progressLabel}
-            initial={{ scale: 0.92, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          >
-            {progressLabel}
-          </motion.span>
         </motion.div>
 
         <div
@@ -146,14 +135,50 @@ const StartupStageCard: React.FC<{ phase: string }> = ({ phase }) => {
                   role="listitem"
                   layout
                   variants={journeyPillVariants}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                  className={`relative inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
                     isCurrent
-                      ? 'bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/30 shadow-sm'
+                      ? 'z-[1] bg-[var(--accent)]/25 text-[var(--accent)] ring-2 ring-[var(--accent)]/50 shadow-[0_0_12px_-2px_var(--accent)]'
                       : isPast
                         ? 'bg-[var(--bg-card)] text-[var(--text-muted)] ring-1 ring-[var(--border-muted)]'
                         : 'bg-[var(--bg-card)]/40 text-[var(--text-subtle)] ring-1 ring-transparent'
                   }`}
+                  animate={
+                    isCurrent
+                      ? {
+                          boxShadow: [
+                            '0 0 14px -3px color-mix(in srgb, var(--accent) 45%, transparent)',
+                            '0 0 22px -2px color-mix(in srgb, var(--accent) 70%, transparent)',
+                            '0 0 14px -3px color-mix(in srgb, var(--accent) 45%, transparent)',
+                          ],
+                        }
+                      : undefined
+                  }
+                  transition={
+                    isCurrent
+                      ? { boxShadow: { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } }
+                      : undefined
+                  }
                 >
+                  {isCurrent && (
+                    <motion.span
+                      aria-hidden
+                      className="pointer-events-none absolute -inset-px rounded-full bg-[var(--accent)]/35"
+                      initial={false}
+                      animate={{
+                        opacity: [0.25, 0.55, 0.25],
+                        scale: [1, 1.12, 1],
+                      }}
+                      transition={{
+                        duration: 2.2,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
+                      style={{
+                        zIndex: -1,
+                        filter: 'blur(10px)',
+                      }}
+                    />
+                  )}
                   {isPast && (
                     <motion.span
                       initial={{ scale: 0 }}
@@ -163,75 +188,39 @@ const StartupStageCard: React.FC<{ phase: string }> = ({ phase }) => {
                       <CheckCircle className="h-3 w-3 shrink-0 text-[var(--accent)] opacity-80" aria-hidden />
                     </motion.span>
                   )}
-                  {step.label}
+                  <span className={isCurrent ? 'relative z-[1]' : undefined}>{step.label}</span>
                 </motion.span>
               );
             })}
           </motion.div>
         </div>
 
-        <motion.div
-          layout
-          className="flex min-h-0 flex-1 flex-col rounded-xl border border-[var(--border-muted)] bg-gradient-to-br from-[var(--accent)]/[0.07] via-[var(--bg-muted)]/30 to-transparent p-3 shadow-[0_1px_0_rgba(255,255,255,0.05)_inset] ring-1 ring-[var(--accent)]/10"
-          whileHover={{ scale: 1.008 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-        >
-          <div className="flex gap-3">
-            <motion.span
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/18 text-[var(--accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] ring-1 ring-[var(--accent)]/22"
-              animate={{
-                boxShadow: [
-                  '0 0 0 0 rgba(0,0,0,0)',
-                  '0 10px 28px -10px rgba(99, 102, 241, 0.35)',
-                  '0 0 0 0 rgba(0,0,0,0)',
-                ],
-              }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <motion.span
-                key={phase}
-                initial={{ rotate: -12, opacity: 0, scale: 0.85 }}
-                animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-              >
-                <PhaseIcon className="h-5 w-5" strokeWidth={2.1} />
-              </motion.span>
-            </motion.span>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={phase}
-                className="min-w-0 flex-1 pt-0.5"
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                  Current stage
-                </p>
-                <p className="mt-1 text-xl font-bold leading-none tracking-tight text-[var(--text)]">
-                  {formatPhaseLabel(phase)}
-                </p>
-              </motion.div>
-            </AnimatePresence>
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--border-muted)] bg-gradient-to-br from-[var(--accent)]/[0.07] via-[var(--bg-muted)]/30 to-transparent p-3 shadow-[0_1px_0_rgba(255,255,255,0.05)_inset] ring-1 ring-[var(--accent)]/10">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 top-0 h-full w-1 rounded-l-xl bg-[var(--accent)] opacity-80 shadow-[0_0_12px_color-mix(in_srgb,var(--accent)_35%,transparent)]"
+          />
+          <div className="relative z-[1] flex gap-3 pl-1">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/18 text-[var(--accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] ring-2 ring-[var(--accent)]/35">
+              <PhaseIcon className="h-5 w-5" strokeWidth={2.1} />
+            </span>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                Current stage
+              </p>
+              <p className="mt-1 text-xl font-bold leading-none tracking-tight text-[var(--text)]">
+                {formatPhaseLabel(phase)}
+              </p>
+            </div>
           </div>
-          <AnimatePresence mode="wait">
-            {phaseHint ? (
-              <motion.div
-                key={phase + '-hint'}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                className="mt-3 rounded-lg border border-[var(--border-muted)]/80 bg-[var(--bg-card)]/60 py-2.5 pl-3 pr-2.5"
-              >
-                <p className="border-l-2 border-[var(--accent)]/45 pl-2.5 text-xs leading-relaxed text-[var(--text-muted)]">
-                  {phaseHint}
-                </p>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </motion.div>
+          {phaseHint ? (
+            <div className="relative z-[1] mt-3 rounded-lg border border-[var(--border-muted)]/80 bg-[var(--bg-card)]/60 py-2.5 pl-3 pr-2.5">
+              <p className="border-l-2 border-[var(--accent)]/45 pl-2.5 text-xs leading-relaxed text-[var(--text-muted)]">
+                {phaseHint}
+              </p>
+            </div>
+          ) : null}
+        </div>
       </motion.div>
     </Card>
   );
@@ -345,6 +334,16 @@ const Overview: React.FC = () => {
 
   const unreadCount = programNotifications.filter((n) => !n.read).length;
 
+  const { primaryNotifications, overflowNotifications } = useMemo(() => {
+    const unreadSorted = [...programNotifications]
+      .filter((n) => !n.read)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return {
+      primaryNotifications: unreadSorted.slice(0, 2),
+      overflowNotifications: unreadSorted.slice(2),
+    };
+  }, [programNotifications]);
+
   const handleMarkNotificationRead = async (notificationId: string) => {
     setDismissingId(notificationId);
     try {
@@ -377,18 +376,31 @@ const Overview: React.FC = () => {
     setIntroSuccess(null);
 
     try {
-      await investorsApi.requestIntro(
+      const result = await investorsApi.requestIntro(
         investor.email,
         startupName,
         user.email,
-        user.fullName
+        user.fullName,
+        { investorName: investor.name }
       );
-      
-      setIntroSuccess(`Introduction request sent to ${investor.name} successfully!`);
+
+      let successText = `Introduction request sent for ${investor.name}.`;
+      if (result.previewUrl) {
+        successText +=
+          " The server is in mail test mode (no real SMTP configured), so this did not go to the investor's real inbox. Add SMTP settings in server .env for real delivery.";
+        if (import.meta.env.DEV) {
+          console.info('[request-intro] Ethereal preview (open in browser):', result.previewUrl);
+        }
+      } else {
+        successText += ' The investor should receive the message shortly.';
+      }
+      setIntroSuccess(successText);
       setTimeout(() => setIntroSuccess(null), 5000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending intro request:', error);
-      setIntroError(error.message || 'Failed to send introduction request. Please try again.');
+      setIntroError(
+        error instanceof Error ? error.message : 'Failed to send introduction request. Please try again.'
+      );
       setTimeout(() => setIntroError(null), 5000);
     } finally {
       setRequestingIntro(null);
@@ -450,10 +462,10 @@ const Overview: React.FC = () => {
             {notificationsLoading && programNotifications.length === 0
               ? 'Loading…'
               : unreadCount > 0
-                ? `${unreadCount} unread`
-                : programNotifications.length > 0
-                  ? 'You are caught up'
-                  : 'No updates yet'}
+                ? `${unreadCount} unread update${unreadCount === 1 ? '' : 's'}`
+                : notificationsLoading
+                  ? 'No updates yet'
+                  : null}
           </div>
         </div>
 
@@ -461,66 +473,135 @@ const Overview: React.FC = () => {
           <p className="text-sm text-red-600 mb-4">{notificationsError}</p>
         )}
 
-        {!notificationsLoading && programNotifications.length === 0 && !notificationsError && (
-          <p className="text-sm text-[var(--text-muted)] leading-relaxed">
-            When your application is accepted, or when admins add events, mentors, or investors, you will see notifications here.
-          </p>
+        {!notificationsLoading && unreadCount === 0 && !notificationsError && (
+          <p className="text-sm text-[var(--text-muted)] text-center py-6">No program updates.</p>
         )}
 
-        {programNotifications.length > 0 && (
-          <ul className="space-y-3" role="list">
-            {programNotifications.map((n) => (
-              <li
-                key={n.id}
-                className={`flex gap-3 rounded-xl border p-4 transition-colors ${
-                  n.read
-                    ? 'border-[var(--border-muted)] bg-[var(--bg-muted)]/40 opacity-90'
-                    : 'border-[var(--accent)]/25 bg-[var(--accent)]/[0.06] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]'
-                }`}
-              >
-                <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-surface)] ring-1 ring-[var(--border-muted)]"
-                  aria-hidden
-                >
-                  {notificationIcon(n.type)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-[var(--text)]">{notificationHeading(n.type)}</p>
-                    <span
-                      className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border ${notificationTypeStyle(
-                        n.type
-                      )}`}
-                    >
-                      {n.type}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-muted)]">{n.message}</p>
-                  <p className="mt-2 text-xs text-[var(--text-subtle)]">
-                    {new Date(n.createdAt).toLocaleString(undefined, {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })}
-                  </p>
-                </div>
-                {!n.read && (
-                  <button
-                    type="button"
-                    onClick={() => handleMarkNotificationRead(n.id)}
-                    disabled={dismissingId === n.id}
-                    className="shrink-0 self-start p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-muted)] transition-colors disabled:opacity-50"
+        {unreadCount > 0 && (
+          <div className="space-y-4">
+            {primaryNotifications.length > 0 && (
+              <ul className="space-y-3" role="list" aria-label="Latest updates">
+                {primaryNotifications.map((n) => (
+                  <li
+                    key={n.id}
+                    role="button"
+                    tabIndex={0}
                     title="Mark as read"
+                    onClick={() => handleMarkNotificationRead(n.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleMarkNotificationRead(n.id);
+                      }
+                    }}
+                    className="flex gap-3 rounded-xl border p-4 transition-colors cursor-pointer select-none border-[var(--accent)]/25 bg-[var(--accent)]/[0.06] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] hover:bg-[var(--accent)]/[0.09]"
                   >
-                    {dismissingId === n.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4" />
-                    )}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-surface)] ring-1 ring-[var(--border-muted)]"
+                      aria-hidden
+                    >
+                      {notificationIcon(n.type)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-[var(--text)]">{notificationHeading(n.type)}</p>
+                        <span
+                          className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border ${notificationTypeStyle(
+                            n.type
+                          )}`}
+                        >
+                          {n.type}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-muted)]">{n.message}</p>
+                      <p className="mt-2 text-xs text-[var(--text-subtle)]">
+                        {new Date(n.createdAt).toLocaleString(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkNotificationRead(n.id);
+                      }}
+                      disabled={dismissingId === n.id}
+                      className="shrink-0 self-start p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-muted)] transition-colors disabled:opacity-50"
+                      title="Mark as read"
+                      aria-label="Mark as read"
+                    >
+                      {dismissingId === n.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4" />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {overflowNotifications.length > 0 && (
+              <ul
+                className="max-h-[min(40vh,260px)] overflow-y-auto overscroll-contain rounded-xl border border-[var(--border-muted)]/80 bg-[var(--bg-muted)]/20 divide-y divide-[var(--border-muted)]/40"
+                role="list"
+                aria-label="More program updates"
+              >
+                {overflowNotifications.map((n) => (
+                  <li
+                    key={n.id}
+                    className="flex gap-2 px-3 py-2.5 opacity-90 hover:opacity-100 cursor-pointer transition-opacity"
+                    onClick={() => handleMarkNotificationRead(n.id)}
+                  >
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--bg-surface)]/80"
+                      aria-hidden
+                    >
+                      {notificationIcon(n.type)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-xs font-medium text-[var(--text)]">{notificationHeading(n.type)}</p>
+                        <span
+                          className={`text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0 rounded border ${notificationTypeStyle(
+                            n.type
+                          )}`}
+                        >
+                          {n.type}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs leading-snug text-[var(--text-muted)] line-clamp-2">{n.message}</p>
+                      <p className="mt-1 text-[10px] text-[var(--text-subtle)]">
+                        {new Date(n.createdAt).toLocaleString(undefined, {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        })}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkNotificationRead(n.id);
+                      }}
+                      disabled={dismissingId === n.id}
+                      className="shrink-0 self-center p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--accent)] disabled:opacity-50"
+                      title="Mark as read"
+                      aria-label="Mark as read"
+                    >
+                      {dismissingId === n.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </Card>
 
@@ -532,7 +613,17 @@ const Overview: React.FC = () => {
 
         {/* Investor Suggestions */}
         <Card className="flex h-full min-h-0 flex-col p-4">
-          <h2 className="text-lg font-semibold text-[var(--text)] mb-4 shrink-0">Available Investors</h2>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-4 shrink-0">
+            <h2 className="text-lg font-semibold text-[var(--text)]">Available Investors</h2>
+            {!investorsLoading && investors.length > 3 && (
+              <Link
+                to="/dashboard/investors"
+                className="text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors whitespace-nowrap"
+              >
+                View all investors ({investors.length - 3} more)
+              </Link>
+            )}
+          </div>
 
           <div className="flex min-h-0 flex-1 flex-col">
           {introSuccess && (
@@ -573,7 +664,10 @@ const Overview: React.FC = () => {
           ) : (
             <div className="flex min-h-0 flex-1 flex-wrap content-start gap-3 justify-center">
               {investors.slice(0, 3).map((investor) => (
-                <div key={investor.id} className="bg-[var(--bg-muted)] rounded-xl p-3 border border-[var(--border-muted)] flex flex-col items-center text-center w-full sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.333%-0.5rem)]">
+                <div
+                  key={investor.id}
+                  className="bg-[var(--bg-muted)] rounded-xl p-3 border border-[var(--border-muted)] flex flex-col items-center text-center w-full sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.333%-0.5rem)]"
+                >
                   <div className="mb-2">
                     <div className="h-10 w-10 bg-[var(--accent-muted)] rounded-full flex items-center justify-center text-[var(--accent)] text-sm font-medium mx-auto mb-1.5">
                       {investor.profilePicture}
@@ -583,7 +677,8 @@ const Overview: React.FC = () => {
                   </div>
                   <p className="text-[11px] text-[var(--text-muted)] mb-1.5 line-clamp-2">{investor.backgroundSummary}</p>
                   <p className="text-[10px] text-[var(--text-subtle)] mb-2">Investment Range: {investor.investmentRange}</p>
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => handleRequestIntro(investor)}
                     disabled={requestingIntro === investor.id}
                     className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--text-subtle)] disabled:cursor-not-allowed text-white py-1.5 px-3 rounded-full text-[11px] font-medium transition-all flex items-center justify-center hover:shadow-lg hover:shadow-[var(--accent)]/20"
@@ -599,13 +694,6 @@ const Overview: React.FC = () => {
                   </button>
                 </div>
               ))}
-              {investors.length > 3 && (
-                <div className="w-full text-center mt-3">
-                  <button className="text-[var(--accent)] hover:text-[var(--accent-hover)] text-sm font-medium">
-                    View All Investors ({investors.length - 3} more)
-                  </button>
-                </div>
-              )}
             </div>
           )}
           </div>

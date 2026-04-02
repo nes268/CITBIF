@@ -44,6 +44,21 @@ const AdminOverview: React.FC = () => {
     }, 30000);
     return () => clearInterval(interval);
   }, [refreshNotifications]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshStartups();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [refreshStartups]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshStartups();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [refreshStartups]);
   
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);

@@ -79,7 +79,13 @@ class InvestorsApi {
     }
   }
 
-  async requestIntro(investorEmail: string, startupName: string, requesterEmail: string, requesterName: string, message?: string): Promise<{ message: string; sent: boolean }> {
+  async requestIntro(
+    investorEmail: string,
+    startupName: string,
+    requesterEmail: string,
+    requesterName: string,
+    options?: { message?: string; investorName?: string }
+  ): Promise<{ message: string; sent: boolean; previewUrl?: string }> {
     const response = await fetch(`${API_URL}/api/investors/request-intro`, {
       method: 'POST',
       headers: {
@@ -90,10 +96,11 @@ class InvestorsApi {
         startupName,
         requesterEmail,
         requesterName,
-        message: message || ''
+        message: options?.message || '',
+        investorName: options?.investorName || '',
       }),
     });
-    return this.handleResponse<{ message: string; sent: boolean }>(response);
+    return this.handleResponse<{ message: string; sent: boolean; previewUrl?: string }>(response);
   }
 }
 

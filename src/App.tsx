@@ -7,6 +7,7 @@ import { NotificationsProvider } from './context/NotificationsContext';
 import { ApplicationsProvider } from './context/ApplicationsContext';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
+import SplashScreen from './components/auth/SplashScreen';
 import ProfileWizard from './components/profile/ProfileWizard';
 import Loading from './components/Loading';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -15,6 +16,7 @@ import AdminOverview from './components/dashboard/admin/AdminOverview';
 import DataRoom from './components/dashboard/DataRoom';
 import Mentors from './components/dashboard/Mentors';
 import Calendar from './components/dashboard/Calendar';
+import Investors from './components/dashboard/Investors';
 import PitchDeck from './components/dashboard/PitchDeck';
 import Fundraising from './components/dashboard/Fundraising';
 import Settings from './components/dashboard/Settings';
@@ -254,6 +256,7 @@ function App() {
             <Route index element={<DashboardContent />} />
             <Route path="data-room" element={<DataRoom />} />
             <Route path="mentors" element={<Mentors />} />
+            <Route path="investors" element={<Investors />} />
             <Route path="calendar" element={<Calendar />} />
             <Route path="pitch-deck" element={<PitchDeck />} />
             <Route path="fundraising" element={<Fundraising />} />
@@ -279,8 +282,7 @@ function App() {
             <Route path="data-room" element={<AdminDataRoom />} />
           </Route>
           
-          {/* Redirect root to login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<SplashScreen />} />
         </Routes>
               </Router>
             </AlertsProvider>

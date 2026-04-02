@@ -195,7 +195,7 @@ const PitchDeck: React.FC = () => {
                   disabled
                   variant="outline"
                 >
-                  Use This Template (Coming Soon)
+                  Use This Template
                 </Button>
               </div>
             </Card>

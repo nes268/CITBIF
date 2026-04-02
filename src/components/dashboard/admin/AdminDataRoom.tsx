@@ -10,7 +10,7 @@ import { documentsApi } from '../../../services/documentsApi';
 import { Startup, Document } from '../../../types';
 
 const AdminDataRoom: React.FC = () => {
-  const { startups, loading: startupsLoading } = useStartups();
+  const { startups, loading: startupsLoading, refreshStartups } = useStartups();
   const { getDocumentsByUserId, deleteDocument } = useDocuments();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,6 +21,21 @@ const AdminDataRoom: React.FC = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [documentCounts, setDocumentCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshStartups();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [refreshStartups]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshStartups();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [refreshStartups]);
 
   useEffect(() => {
     if (selectedStartup) {

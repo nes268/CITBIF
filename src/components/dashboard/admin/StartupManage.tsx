@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../../ui/Card';
 import { ModalPortal } from '../../ui/ModalPortal';
 import Button from '../../ui/Button';
 import Input from '../../ui/Input';
-import { Search, Filter, Building2, User, Mail, AlertCircle, Loader2, X, Phone, MapPin, Briefcase, FileText, DollarSign, Calendar, Users, Link as LinkIcon } from 'lucide-react';
+import { Search, Filter, Building2, User, Mail, AlertCircle, Loader2, X, Phone, MapPin, Briefcase, FileText, DollarSign, Calendar, Users, Link as LinkIcon, TrendingUp } from 'lucide-react';
 import { Startup, Profile } from '../../../types';
 import { useStartups } from '../../../hooks/useStartups';
 import { profileApi } from '../../../services/profileApi';
+
+const STARTUP_PHASE_LABELS: Record<string, string> = {
+  idea: 'Idea',
+  mvp: 'MVP',
+  seed: 'Seed',
+  'series-a': 'Series A',
+  growth: 'Growth',
+  scale: 'Scale',
+};
+
+function formatStartupStage(phase?: Startup['startupPhase']): string {
+  if (!phase) return '—';
+  return STARTUP_PHASE_LABELS[phase] ?? phase.replace(/-/g, ' ');
+}
 
 const StartupManage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,6 +40,99 @@ const StartupManage: React.FC = () => {
     updateStartup,
     deleteStartup
   } = useStartups();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshStartups();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [refreshStartups]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshStartups();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [refreshStartups]);
+
+  useEffect(() => {
+    if (!showProfileModal || !selectedStartup) return;
+    const fresh = startups.find((s) => s.id === selectedStartup.id);
+    if (!fresh) return;
+    setSelectedStartup((prev) => {
+      if (!prev || prev.id !== fresh.id) return prev;
+      if (
+        prev.updatedAt === fresh.updatedAt &&
+        prev.startupPhase === fresh.startupPhase &&
+        prev.email === fresh.email &&
+        prev.founder === fresh.founder &&
+        prev.name === fresh.name &&
+        prev.sector === fresh.sector &&
+        prev.status === fresh.status
+      ) {
+        return prev;
+      }
+      return fresh;
+    });
+  }, [startups, showProfileModal, selectedStartup?.id]);
+
+  useEffect(() => {
+    if (!showProfileModal || !selectedStartup) return;
+
+    let userId: string | null = null;
+    const uid = selectedStartup.userId;
+    if (typeof uid === 'string') {
+      const trimmed = uid.trim();
+      if (trimmed && trimmed !== 'null' && trimmed !== 'undefined') userId = trimmed;
+    } else if (uid && typeof uid === 'object' && uid !== null) {
+      const o = uid as { _id?: unknown; id?: unknown };
+      if (o._id) userId = typeof o._id === 'string' ? o._id : String(o._id);
+      else if (o.id) userId = typeof o.id === 'string' ? o.id : String(o.id);
+    }
+
+    if (!userId) {
+      setSelectedProfile(null);
+      setProfileError('No user ID found for this startup. Profile may not be completed yet.');
+      setLoadingProfile(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingProfile(true);
+    setProfileError(null);
+
+    (async () => {
+      try {
+        const profile = await profileApi.getProfileByUserId(userId!);
+        if (!cancelled) {
+          setSelectedProfile(profile);
+          setProfileError(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error fetching profile:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to load profile details';
+          const cleanErrorMessage = errorMessage.includes('Invalid user ID format')
+            ? 'Profile details are not available for this startup.'
+            : errorMessage;
+          setProfileError(cleanErrorMessage);
+          setSelectedProfile(null);
+        }
+      } finally {
+        if (!cancelled) setLoadingProfile(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    showProfileModal,
+    selectedStartup?.id,
+    selectedStartup?.userId,
+    selectedStartup?.updatedAt,
+  ]);
 
   // Extract unique sectors from startups, with fallback to common sectors
   const defaultSectors = ['CleanTech', 'HealthTech', 'EdTech', 'FinTech', 'AgriTech', 'FoodTech', 'RetailTech', 'PropTech'];
@@ -85,62 +192,11 @@ const StartupManage: React.FC = () => {
     return type === 'incubation' ? 'bg-purple-100 text-purple-700' : 'bg-[var(--accent-muted)] text-[var(--accent)]';
   };
 
-  const handleStartupNameClick = async (startup: Startup) => {
-    // Set the selected startup immediately to show basic info
+  const handleStartupNameClick = (startup: Startup) => {
     setSelectedStartup(startup);
     setShowProfileModal(true);
-    setProfileError(null);
     setSelectedProfile(null);
-
-    // Extract userId - handle both string and populated object cases
-    let userId: string | null = null;
-    
-    if (startup.userId) {
-      if (typeof startup.userId === 'string') {
-        // If it's a string, check if it's valid
-        const trimmed = startup.userId.trim();
-        if (trimmed && trimmed !== 'null' && trimmed !== 'undefined') {
-          userId = trimmed;
-        }
-      } else if (typeof startup.userId === 'object' && startup.userId !== null) {
-        // If it's a populated object, extract the _id
-        const userIdObj = startup.userId as any;
-        if (userIdObj._id) {
-          userId = typeof userIdObj._id === 'string' ? userIdObj._id : userIdObj._id.toString();
-        } else if (userIdObj.id) {
-          userId = typeof userIdObj.id === 'string' ? userIdObj.id : userIdObj.id.toString();
-        }
-      }
-    }
-
-    // Check if we have a valid userId
-    if (!userId) {
-      setLoadingProfile(false);
-      setProfileError('No user ID found for this startup. Profile may not be completed yet.');
-      return;
-    }
-
-    setLoadingProfile(true);
-
-    try {
-      console.log('Fetching profile for userId:', userId);
-      const profile = await profileApi.getProfileByUserId(userId);
-      console.log('Profile fetched successfully:', profile);
-      setSelectedProfile(profile);
-      setProfileError(null);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      // Don't show the raw error message if it contains object details
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load profile details';
-      // Clean up error message to avoid showing object structures
-      const cleanErrorMessage = errorMessage.includes('Invalid user ID format') 
-        ? 'Profile details are not available for this startup.'
-        : errorMessage;
-      setProfileError(cleanErrorMessage);
-      // Don't close modal on error, let user see the error message
-    } finally {
-      setLoadingProfile(false);
-    }
+    setProfileError(null);
   };
 
   const closeProfileModal = () => {
@@ -403,6 +459,15 @@ const StartupManage: React.FC = () => {
                     <span className={`text-xs px-2 py-1 rounded-full capitalize mt-1 inline-block ${getTypeColor(selectedStartup.type)}`}>
                       {selectedStartup.type}
                     </span>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 flex items-center">
+                      <TrendingUp className="h-4 w-4 mr-1" />
+                      Current stage
+                    </label>
+                    <p className="text-gray-900 mt-1 font-medium capitalize">
+                      {formatStartupStage(selectedStartup.startupPhase)}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Status</label>
