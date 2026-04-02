@@ -5,11 +5,8 @@ import Input from '../../ui/Input';
 import { Calendar, Plus, Edit, Trash2, Users, MapPin, Clock, ExternalLink, AlertCircle, Loader2 } from 'lucide-react';
 import { Event, CreateEventData, UpdateEventData } from '../../../types';
 import { useEvents } from '../../../hooks/useEvents';
-import { useAlerts } from '../../../context/AlertsContext';
 
 const Events: React.FC = () => {
-  const { createEventAlert } = useAlerts();
-  
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -89,9 +86,6 @@ const Events: React.FC = () => {
         });
       } else {
         await createEvent(formData);
-        
-        // Create automatic alert for new event
-        createEventAlert(formData.title, formData.date, formData.category);
       }
       
       setShowCreateForm(false);

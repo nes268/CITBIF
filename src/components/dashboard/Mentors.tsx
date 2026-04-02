@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import { Search, User, MessageSquare, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Search, User, MessageSquare, Loader2, AlertCircle } from 'lucide-react';
 import { Mentor } from '../../types';
 import { useMentors } from '../../hooks/useMentors';
 import { mentorsApi } from '../../services/mentorsApi';
@@ -235,15 +235,10 @@ const Mentors: React.FC = () => {
 
         <Card className="p-6 max-w-2xl">
           {submitSuccess ? (
-            <div className="text-center py-8">
-              <div className="flex justify-center mb-4">
-                <CheckCircle className="h-16 w-16 text-[var(--accent)]" />
-              </div>
-              <h3 className="text-xl font-semibold text-[var(--text)] mb-2">Request Sent Successfully!</h3>
-              <p className="text-[var(--text-muted)] mb-4">
-                Your session request has been sent to {selectedMentor.name}. They will contact you soon.
+            <div className="space-y-4">
+              <p className="text-sm text-[var(--text-muted)]">
+                Request sent successfully. Your session request has been sent to {selectedMentor.name}. They will contact you soon. Redirecting back to mentors…
               </p>
-              <p className="text-sm text-[var(--text-subtle)]">Redirecting back to mentors...</p>
             </div>
           ) : (
             <form className="space-y-6" onSubmit={handleFormSubmit}>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Card from '../../ui/Card';
 import Button from '../../ui/Button';
 import Input from '../../ui/Input';
-import { Plus, Edit, Trash2, Search, DollarSign, Mail, Phone, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, DollarSign, Mail, Phone, AlertCircle, Loader2 } from 'lucide-react';
 import { Investor, CreateInvestorData } from '../../../types';
 import { useInvestors } from '../../../hooks/useInvestors';
 
@@ -205,15 +205,6 @@ const InvestorManage: React.FC = () => {
         </div>
 
         <Card className="p-6 max-w-4xl">
-          {successMessage && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-5 w-5 text-green-400" />
-                <p className="text-green-700">{successMessage}</p>
-              </div>
-            </div>
-          )}
-          
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center space-x-3">
@@ -311,6 +302,9 @@ const InvestorManage: React.FC = () => {
                 required
                 disabled={isSubmitting}
               />
+              {successMessage && (
+                <p className="text-sm text-gray-600 mt-2">{successMessage}</p>
+              )}
             </div>
 
             <div className="flex space-x-4">

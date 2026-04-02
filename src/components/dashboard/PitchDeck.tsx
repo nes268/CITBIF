@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import Card from '../ui/Card';
 import { ModalPortal } from '../ui/ModalPortal';
 import Button from '../ui/Button';
-import { Presentation as PresentationChart, Upload, FileText, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Presentation as PresentationChart, Upload, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { documentsApi } from '../../services/documentsApi';
 
@@ -152,21 +152,14 @@ const PitchDeck: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Success Message */}
-      {showSuccessMessage && (
-        <div className="bg-emerald-900/20 border border-emerald-500/50 rounded-lg p-4">
-          <div className="flex items-center space-x-2">
-            <CheckCircle className="h-5 w-5 text-emerald-400" />
-            <span className="text-emerald-300">Pitch deck uploaded successfully!</span>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-extrabold text-[var(--text)]">Pitch Deck</h1>
           <p className="text-[var(--text-muted)] mt-1">Choose a template or upload your own deck</p>
+          {showSuccessMessage && (
+            <p className="text-sm text-[var(--text-muted)] mt-2">Pitch deck uploaded successfully.</p>
+          )}
         </div>
         <Button 
           onClick={() => {

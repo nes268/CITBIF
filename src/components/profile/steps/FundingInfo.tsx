@@ -7,7 +7,7 @@ import { DollarSign } from 'lucide-react';
 interface FundingInfoProps {
   data: Partial<Profile>;
   updateData: (data: Partial<Profile>) => void;
-  onNext: () => void;
+  onNext: (stepPayload?: Partial<Profile>) => void;
   onPrev: () => void;
 }
 
@@ -51,7 +51,7 @@ const FundingInfo: React.FC<FundingInfoProps> = ({ data, updateData, onNext, onP
     };
     
     updateData(finalData);
-    onNext();
+    onNext(finalData);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

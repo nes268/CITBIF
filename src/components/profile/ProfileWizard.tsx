@@ -31,7 +31,7 @@ const ProfileWizard: React.FC = () => {
     setProfileData(prev => ({ ...prev, ...stepData }));
   };
 
-  const nextStep = async () => {
+  const nextStep = async (stepPayload?: Partial<Profile>) => {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -40,13 +40,19 @@ const ProfileWizard: React.FC = () => {
         return;
       }
 
+      // Merge last-step fields here: updateData() schedules state async, so profileData
+      // would still be stale on first submit without stepPayload.
+      const payload = stepPayload
+        ? { ...profileData, ...stepPayload }
+        : profileData;
+
       setIsSaving(true);
       setError(null);
 
       try {
         const savedProfile = await profileApi.saveProfile({
           userId: user.id,
-          ...profileData
+          ...payload
         } as Partial<Profile> & { userId: string });
 
         if (savedProfile.startupName && savedProfile.founderName && savedProfile.sector) {

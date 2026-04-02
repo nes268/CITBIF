@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import Button from '../../ui/Button';
 import { Profile } from '../../../types';
-import { BarChart3, Upload, Check, Plus, X, Loader2 } from 'lucide-react';
+import { BarChart3, Upload, Plus, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { documentsApi } from '../../../services/documentsApi';
 
@@ -227,10 +227,9 @@ const PitchDeckTraction: React.FC<PitchDeckTractionProps> = ({ data, updateData,
             <div className="space-y-2">
               {formData.businessDocuments.map((doc, index) => (
                 <div key={index} className="flex items-center justify-between bg-[var(--bg-muted)] p-3 rounded-lg border border-[var(--border)]">
-                  <div className="flex items-center space-x-2 text-[var(--text)]">
-                    <Check className="h-4 w-4 text-[var(--accent)]" />
-                    <span>{documentNames.business[index] || (doc.includes('/') ? doc.split('/').pop() : doc)}</span>
-                  </div>
+                  <span className="text-sm text-[var(--text)]">
+                    {documentNames.business[index] || (doc.includes('/') ? doc.split('/').pop() : doc)}
+                  </span>
                   <Button
                     type="button"
                     variant="ghost"
@@ -268,6 +267,9 @@ const PitchDeckTraction: React.FC<PitchDeckTractionProps> = ({ data, updateData,
           )}
           {errors.business && (
             <p className="text-sm text-red-600 mt-2">{errors.business}</p>
+          )}
+          {formData.businessDocuments && formData.businessDocuments.length > 0 && (
+            <p className="text-sm text-[var(--text-muted)] mt-2">Uploaded successfully.</p>
           )}
         </div>
 
@@ -310,10 +312,9 @@ const PitchDeckTraction: React.FC<PitchDeckTractionProps> = ({ data, updateData,
             <div className="space-y-2">
               {formData.tractionDetails.map((doc, index) => (
                 <div key={index} className="flex items-center justify-between bg-[var(--bg-muted)] p-3 rounded-lg border border-[var(--border)]">
-                  <div className="flex items-center space-x-2 text-[var(--text)]">
-                    <Check className="h-4 w-4 text-[var(--accent)]" />
-                    <span>{documentNames.traction[index] || (doc.includes('/') ? doc.split('/').pop() : doc)}</span>
-                  </div>
+                  <span className="text-sm text-[var(--text)]">
+                    {documentNames.traction[index] || (doc.includes('/') ? doc.split('/').pop() : doc)}
+                  </span>
                   <Button
                     type="button"
                     variant="ghost"
@@ -351,6 +352,9 @@ const PitchDeckTraction: React.FC<PitchDeckTractionProps> = ({ data, updateData,
           )}
           {errors.traction && (
             <p className="text-sm text-red-600 mt-2">{errors.traction}</p>
+          )}
+          {formData.tractionDetails && formData.tractionDetails.length > 0 && (
+            <p className="text-sm text-[var(--text-muted)] mt-2">Uploaded successfully.</p>
           )}
         </div>
 
@@ -393,15 +397,17 @@ const PitchDeckTraction: React.FC<PitchDeckTractionProps> = ({ data, updateData,
                   )}
                 </Button>
                 {formData.balanceSheet && !uploading.balance && (
-                  <div className="flex items-center text-[var(--accent)] text-sm">
-                    <Check className="h-4 w-4 mr-1" />
-                    <span>{documentNames.balance || (formData.balanceSheet.includes('/') ? formData.balanceSheet.split('/').pop() : formData.balanceSheet)}</span>
-                  </div>
+                  <span className="text-sm text-[var(--text-muted)]">
+                    {documentNames.balance || (formData.balanceSheet.includes('/') ? formData.balanceSheet.split('/').pop() : formData.balanceSheet)}
+                  </span>
                 )}
               </div>
             </div>
             {errors.balance && (
               <p className="text-sm text-red-600 mt-2">{errors.balance}</p>
+            )}
+            {formData.balanceSheet && !uploading.balance && (
+              <p className="text-sm text-[var(--text-muted)] mt-2">Uploaded successfully.</p>
             )}
           </div>
         </div>

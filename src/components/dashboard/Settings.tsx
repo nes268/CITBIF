@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
-import { Settings as SettingsIcon, Save, User, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Save, User, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { profileApi } from '../../services/profileApi';
 import { useStartups } from '../../hooks/useStartups';
 import { startupsApi } from '../../services/startupsApi';
@@ -16,11 +16,6 @@ const Settings: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<'active' | 'dropout'>('active');
   const [startupId, setStartupId] = useState<string | null>(null);
-  const [settings, setSettings] = useState({
-    maintenanceMode: false,
-    autoApproveApplications: false,
-    allowUserRegistration: true,
-  });
   const [personalDetails, setPersonalDetails] = useState({
     fullName: '',
     email: '',
@@ -91,16 +86,6 @@ const Settings: React.FC = () => {
     };
     fetchData();
   }, [user?.id, user?.role]);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      // Save to backend here
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handlePersonalDetailsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -190,89 +175,17 @@ const Settings: React.FC = () => {
     }
   };
 
-  const toggleSetting = (key: keyof typeof settings) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  // Admin Settings Page
-  if (user?.role === 'admin') {
+  if (user?.role !== 'user') {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-extrabold text-[var(--text)] flex items-center gap-2">
-            <SettingsIcon className="h-8 w-8 text-[var(--accent)]" />
-            Admin Settings
-          </h1>
-          <p className="text-[var(--text-muted)] mt-1">Manage platform settings</p>
+          <h1 className="text-3xl font-extrabold text-[var(--text)]">Settings</h1>
+          <p className="text-[var(--text-muted)] mt-1">Settings are available for startup accounts.</p>
         </div>
-
-        <Card className="p-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-3 border-b border-[var(--border)]">
-              <div>
-                <h3 className="text-[var(--text)] font-medium">Maintenance Mode</h3>
-                <p className="text-sm text-[var(--text-muted)]">Disable access for all users except admins</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.maintenanceMode}
-                  onChange={() => toggleSetting('maintenanceMode')}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-[var(--border)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent)]"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between py-3 border-b border-[var(--border)]">
-              <div>
-                <h3 className="text-[var(--text)] font-medium">Auto-approve Applications</h3>
-                <p className="text-sm text-[var(--text-muted)]">Automatically approve new applications</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.autoApproveApplications}
-                  onChange={() => toggleSetting('autoApproveApplications')}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-[var(--border)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent)]"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between py-3">
-              <div>
-                <h3 className="text-[var(--text)] font-medium">Allow User Registration</h3>
-                <p className="text-sm text-[var(--text-muted)]">Enable new user signups</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.allowUserRegistration}
-                  onChange={() => toggleSetting('allowUserRegistration')}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-[var(--border)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent)]"></div>
-              </label>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-[var(--border-muted)]">
-            <Button
-              onClick={handleSave}
-              isLoading={isSaving}
-              className="w-full md:w-auto"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Save Changes
-            </Button>
-          </div>
-        </Card>
       </div>
     );
   }
 
-  // Regular user settings
   if (loading) {
     return (
       <div className="space-y-6">

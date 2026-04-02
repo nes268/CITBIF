@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import Button from '../../ui/Button';
 import { Profile } from '../../../types';
-import { FileText, Upload, Check, Loader2 } from 'lucide-react';
+import { FileText, Upload, Loader2 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { documentsApi } from '../../../services/documentsApi';
 
@@ -167,12 +167,6 @@ const Documentation: React.FC<DocumentationProps> = ({ data, updateData, onNext,
                   <h3 className="text-lg font-medium text-[var(--text)]">{doc.label}</h3>
                   {doc.required && <span className="text-red-600 text-sm">*Required</span>}
                 </div>
-                {formData[doc.key] && (
-                  <div className="flex items-center text-[var(--accent)] text-sm">
-                    <Check className="h-4 w-4 mr-1" />
-                    Uploaded
-                  </div>
-                )}
               </div>
               
               <p className="text-sm text-[var(--text-muted)] mb-3">{doc.description}</p>
@@ -216,6 +210,10 @@ const Documentation: React.FC<DocumentationProps> = ({ data, updateData, onNext,
                   </span>
                 )}
               </div>
+
+              {formData[doc.key] && !uploading[doc.key] && (
+                <p className="text-sm text-[var(--text-muted)] mt-2">Uploaded successfully.</p>
+              )}
               
               {errors[doc.key] && (
                 <p className="text-sm text-red-600 mt-2">{errors[doc.key]}</p>

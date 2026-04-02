@@ -29,68 +29,10 @@ interface AlertsContextType {
   createFundingAlert: (fundingStage: string, amount: number, dueDate: string) => void;
 }
 
-const initialAlerts: Alert[] = [
-  {
-    id: '1',
-    title: 'Application Approved',
-    description: 'Your application for CITBIF Incubation Program has been approved by Admin. Welcome to the program!',
-    date: '2025-01-15',
-    type: 'milestone',
-    priority: 'high',
-    status: 'pending',
-    createdAt: '2025-01-15T10:00:00Z',
-    updatedAt: '2025-01-15T10:00:00Z'
-  },
-  {
-    id: '2',
-    title: 'New Event: Startup Pitch Competition',
-    description: 'A new pitch competition event has been organized for you. Don\'t miss out!',
-    date: '2025-01-20',
-    type: 'meeting',
-    priority: 'medium',
-    status: 'pending',
-    createdAt: '2025-01-15T10:00:00Z',
-    updatedAt: '2025-01-15T10:00:00Z'
-  },
-  {
-    id: '3',
-    title: 'Reminder: Financial Reports Due',
-    description: 'Submit your quarterly financial reports and pitch deck updates by the deadline',
-    date: '2025-01-22',
-    type: 'deadline',
-    priority: 'urgent',
-    status: 'pending',
-    createdAt: '2025-01-15T10:00:00Z',
-    updatedAt: '2025-01-15T10:00:00Z'
-  },
-  {
-    id: '4',
-    title: 'Milestone Due: MVP Development',
-    description: 'You have a milestone deadline approaching. Make sure to complete all requirements.',
-    date: '2025-02-01',
-    type: 'milestone',
-    priority: 'high',
-    status: 'pending',
-    createdAt: '2025-01-15T10:00:00Z',
-    updatedAt: '2025-01-15T10:00:00Z'
-  },
-  {
-    id: '5',
-    title: 'Funding Opportunity: Seed Stage',
-    description: 'A new funding opportunity for Seed stage with $200,000 is available.',
-    date: '2025-02-15',
-    type: 'funding',
-    priority: 'high',
-    status: 'pending',
-    createdAt: '2025-01-15T10:00:00Z',
-    updatedAt: '2025-01-15T10:00:00Z'
-  }
-];
-
 const AlertsContext = createContext<AlertsContextType | undefined>(undefined);
 
 export const AlertsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [alerts, setAlerts] = useState<Alert[]>(initialAlerts);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
 
   const addAlert = (alertData: Omit<Alert, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => {
     const newAlert: Alert = {

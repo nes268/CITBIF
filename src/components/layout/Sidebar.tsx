@@ -44,7 +44,6 @@ const Sidebar: React.FC = () => {
     { path: '/admin/investors', icon: DollarSign, label: 'Investor Manage' },
     { path: '/admin/startups', icon: Building2, label: 'Startups' },
     { path: '/admin/data-room', icon: FolderOpen, label: 'Data Room' },
-    { path: '/admin/settings', icon: Settings, label: 'Settings' },
   ];
 
   const navItems = user?.role === 'admin' ? adminNavItems : userNavItems;

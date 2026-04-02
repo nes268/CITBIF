@@ -4,7 +4,7 @@ export interface UserNotification {
   id: string;
   userId: string;
   message: string;
-  type: 'approval' | 'rejection' | 'info' | 'warning';
+  type: 'approval' | 'rejection' | 'info' | 'warning' | 'event' | 'mentor' | 'investor';
   read: boolean;
   createdAt: string;
   updatedAt: string;

@@ -1,114 +1,350 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Card from '../../ui/Card';
 import Button from '../../ui/Button';
 import Input from '../../ui/Input';
-import { Search, Filter, Eye, Check, X, Calendar, Building2, User, AlertCircle, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
-import { Startup } from '../../../types';
-import { useAlerts } from '../../../context/AlertsContext';
+import { Search, Filter, Eye, Check, X, Calendar, Building2, User, AlertCircle, CheckCircle, Loader2, RefreshCw, FileText } from 'lucide-react';
+import { Startup, Profile } from '../../../types';
 import { useNotifications } from '../../../context/NotificationsContext';
 import { useApplications } from '../../../context/ApplicationsContext';
+import { profileApi } from '../../../services/profileApi';
+import { startupsApi } from '../../../services/startupsApi';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+function resolveAssetUrl(ref: string): string {
+  if (!ref || typeof ref !== 'string') return '';
+  const t = ref.trim();
+  if (!t) return '';
+  if (t.startsWith('http://') || t.startsWith('https://') || t.startsWith('data:')) return t;
+  return t.startsWith('/') ? `${API_BASE}${t}` : `${API_BASE}/${t}`;
+}
+
+function fileLabel(ref: string): string {
+  if (!ref) return '';
+  const parts = ref.split(/[/\\]/);
+  return parts[parts.length - 1] || ref;
+}
+
+const ProfileField: React.FC<{ label: string; children?: React.ReactNode }> = ({ label, children }) => (
+  <div className="py-2.5 border-b border-gray-100 last:border-b-0">
+    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</dt>
+    <dd className="text-sm text-gray-900 mt-1 break-words">
+      {children != null && children !== '' ? children : '—'}
+    </dd>
+  </div>
+);
+
+const DocumentLink: React.FC<{ href?: string; label: string }> = ({ href, label }) => {
+  if (!href) return <span className="text-gray-400">—</span>;
+  const url = resolveAssetUrl(href);
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline break-all inline-flex items-center gap-1">
+      <FileText className="h-3.5 w-3.5 shrink-0" />
+      {label || fileLabel(href)}
+    </a>
+  );
+};
+
+type ProfileTabId = 'personal' | 'enterprise' | 'incubation' | 'documents' | 'pitch' | 'funding';
+
+const PROFILE_TABS: { id: ProfileTabId; label: string }[] = [
+  { id: 'personal', label: 'Personal' },
+  { id: 'enterprise', label: 'Enterprise' },
+  { id: 'incubation', label: 'Incubation' },
+  { id: 'documents', label: 'Documents' },
+  { id: 'pitch', label: 'Pitch & traction' },
+  { id: 'funding', label: 'Funding' },
+];
+
+const ProfileSubmissionTabs: React.FC<{ profile: Profile }> = ({ profile }) => {
+  const [tab, setTab] = useState<ProfileTabId>('personal');
+
+  useEffect(() => {
+    setTab('personal');
+  }, [profile.id]);
+
+  return (
+    <Card className="border border-gray-200 overflow-hidden shadow-sm">
+      <div className="border-b border-gray-200 bg-gray-50/90">
+        <nav className="flex overflow-x-auto gap-1 px-2 py-2 sm:px-3" aria-label="Profile sections">
+          {PROFILE_TABS.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                id={`profile-tab-${t.id}`}
+                aria-controls={`profile-panel-${t.id}`}
+                onClick={() => setTab(t.id)}
+                className={`shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  active
+                    ? 'bg-white text-[var(--accent)] shadow-sm ring-1 ring-gray-200/80'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/70'
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="p-6 sm:p-8">
+        {tab === 'personal' && (
+          <div role="tabpanel" id="profile-panel-personal" aria-labelledby="profile-tab-personal">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal information</h3>
+            <dl className="max-w-2xl">
+              <ProfileField label="Full name">{profile.fullName}</ProfileField>
+              <ProfileField label="Email">{profile.email}</ProfileField>
+              <ProfileField label="Phone">{profile.phoneNumber}</ProfileField>
+              <ProfileField label="Location">{profile.location}</ProfileField>
+            </dl>
+          </div>
+        )}
+
+        {tab === 'enterprise' && (
+          <div role="tabpanel" id="profile-panel-enterprise" aria-labelledby="profile-tab-enterprise">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Enterprise information</h3>
+            <dl className="max-w-2xl">
+              <ProfileField label="Startup name">{profile.startupName}</ProfileField>
+              <ProfileField label="Entity type">{profile.entityType}</ProfileField>
+              <ProfileField label="Application type">{profile.applicationType}</ProfileField>
+              <ProfileField label="Founder name">{profile.founderName}</ProfileField>
+              <ProfileField label="Co-founders">
+                {profile.coFounderNames && profile.coFounderNames.length > 0
+                  ? profile.coFounderNames.join(', ')
+                  : undefined}
+              </ProfileField>
+              <ProfileField label="Sector">{profile.sector}</ProfileField>
+              <ProfileField label="LinkedIn">{profile.linkedinProfile || undefined}</ProfileField>
+            </dl>
+          </div>
+        )}
+
+        {tab === 'incubation' && (
+          <div role="tabpanel" id="profile-panel-incubation" aria-labelledby="profile-tab-incubation">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Incubation details</h3>
+            <dl className="max-w-2xl">
+              <ProfileField label="Previously incubated">{profile.previouslyIncubated ? 'Yes' : 'No'}</ProfileField>
+              <ProfileField label="Incubator name">{profile.incubatorName}</ProfileField>
+              <ProfileField label="Incubator location">{profile.incubatorLocation}</ProfileField>
+              <ProfileField label="Duration">{profile.incubationDuration}</ProfileField>
+              <ProfileField label="Incubator type">{profile.incubatorType}</ProfileField>
+              <ProfileField label="Mode">{profile.incubationMode}</ProfileField>
+              <ProfileField label="Supports received">
+                {profile.supportsReceived && profile.supportsReceived.length > 0
+                  ? profile.supportsReceived.join(', ')
+                  : undefined}
+              </ProfileField>
+            </dl>
+          </div>
+        )}
+
+        {tab === 'documents' && (
+          <div role="tabpanel" id="profile-panel-documents" aria-labelledby="profile-tab-documents">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Documentation</h3>
+            <dl className="max-w-2xl">
+              <ProfileField label="Aadhaar">
+                <DocumentLink href={profile.aadhaarDoc} label={fileLabel(profile.aadhaarDoc)} />
+              </ProfileField>
+              <ProfileField label="Incorporation certificate">
+                <DocumentLink href={profile.incorporationCert} label={fileLabel(profile.incorporationCert || '')} />
+              </ProfileField>
+              <ProfileField label="MSME">
+                <DocumentLink href={profile.msmeCert} label={fileLabel(profile.msmeCert || '')} />
+              </ProfileField>
+              <ProfileField label="DPIIT">
+                <DocumentLink href={profile.dpiitCert} label={fileLabel(profile.dpiitCert || '')} />
+              </ProfileField>
+              <ProfileField label="MoU / partnership">
+                <DocumentLink href={profile.mouPartnership} label={fileLabel(profile.mouPartnership || '')} />
+              </ProfileField>
+            </dl>
+          </div>
+        )}
+
+        {tab === 'pitch' && (
+          <div role="tabpanel" id="profile-panel-pitch" aria-labelledby="profile-tab-pitch">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Pitch deck & traction</h3>
+            <dl className="max-w-2xl">
+              <ProfileField label="Business documents / pitch">
+                {profile.businessDocuments && profile.businessDocuments.length > 0 ? (
+                  <ul className="space-y-2 mt-1 list-none pl-0">
+                    {profile.businessDocuments.map((doc, i) => (
+                      <li key={i}>
+                        <DocumentLink href={doc} label={fileLabel(doc)} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  '—'
+                )}
+              </ProfileField>
+              <ProfileField label="Traction documents">
+                {profile.tractionDetails && profile.tractionDetails.length > 0 ? (
+                  <ul className="space-y-2 mt-1 list-none pl-0">
+                    {profile.tractionDetails.map((doc, i) => (
+                      <li key={i}>
+                        <DocumentLink href={doc} label={fileLabel(doc)} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  '—'
+                )}
+              </ProfileField>
+              <ProfileField label="Balance sheet">
+                <DocumentLink href={profile.balanceSheet} label={fileLabel(profile.balanceSheet || '')} />
+              </ProfileField>
+            </dl>
+          </div>
+        )}
+
+        {tab === 'funding' && (
+          <div role="tabpanel" id="profile-panel-funding" aria-labelledby="profile-tab-funding">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Funding information</h3>
+            <dl className="max-w-2xl">
+              <ProfileField label="Funding stage">{profile.fundingStage}</ProfileField>
+              <ProfileField label="Already funded">{profile.alreadyFunded ? 'Yes' : 'No'}</ProfileField>
+              <ProfileField label="Funding amount">
+                {profile.fundingAmount != null ? String(profile.fundingAmount) : undefined}
+              </ProfileField>
+              <ProfileField label="Funding source">{profile.fundingSource}</ProfileField>
+              <ProfileField label="Funding date">{profile.fundingDate}</ProfileField>
+            </dl>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+};
 
 const Review: React.FC = () => {
-  const { createApplicationApprovalAlert, createReminderAlert } = useAlerts();
-  const { createApplicationNotification, createReviewNotification } = useNotifications();
-  const { 
-    applications, 
+  const { startupId: routeStartupId } = useParams<{ startupId: string }>();
+  const navigate = useNavigate();
+  const { createApplicationNotification } = useNotifications();
+  const {
+    applications,
     isLoading,
     refreshApplications,
-    updateApplication, 
-    approveApplication, 
-    rejectApplication 
+    approveApplication,
+    rejectApplication,
   } = useApplications();
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('pending');
-
-  // Auto-refresh applications every 60 seconds (silent refresh - no loading indicator)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Silent refresh - don't show loading state
-      refreshApplications(false);
-    }, 60000); // Refresh every 60 seconds
-
-    return () => clearInterval(interval);
-  }, [refreshApplications]);
-
-  // Refresh when page becomes visible (user switches tabs back) - silent refresh
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        // Silent refresh - don't show loading state
-        refreshApplications(false);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [refreshApplications]);
-  const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
+  const [detailStartup, setDetailStartup] = useState<Startup | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [profileLoadNote, setProfileLoadNote] = useState<string | null>(null);
   const [processingStartupId, setProcessingStartupId] = useState<string | null>(null);
   const [processingAction, setProcessingAction] = useState<'approve' | 'reject' | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [showErrorMessage, setShowErrorMessage] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Use dynamic applications from context
   const startups = applications;
 
-  // Normalize status for Review page display: map 'active' -> 'approved', 'dropout' -> 'rejected'
-  // Review page only shows: 'approved', 'rejected', or 'pending'
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshApplications(false);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [refreshApplications]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshApplications(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [refreshApplications]);
+
+  useEffect(() => {
+    if (!routeStartupId) {
+      setDetailStartup(null);
+      setProfile(null);
+      setDetailError(null);
+      setProfileLoadNote(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setDetailLoading(true);
+      setDetailError(null);
+      setProfileLoadNote(null);
+      setProfile(null);
+      try {
+        const s = await startupsApi.getStartupById(routeStartupId);
+        if (cancelled) return;
+        setDetailStartup(s);
+        if (!s.userId) {
+          setProfileLoadNote('This application has no linked user ID, so profile wizard data cannot be loaded.');
+          return;
+        }
+        try {
+          const p = await profileApi.getProfileByUserId(s.userId);
+          if (!cancelled) setProfile(p);
+        } catch {
+          if (!cancelled) {
+            setProfileLoadNote('No profile record found for this founder (they may not have completed the profile wizard).');
+          }
+        }
+      } catch (e: unknown) {
+        if (!cancelled) {
+          setDetailStartup(null);
+          setDetailError(e instanceof Error ? e.message : 'Application not found.');
+        }
+      } finally {
+        if (!cancelled) setDetailLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [routeStartupId]);
+
   const normalizeStatusForReview = (status: string): 'approved' | 'rejected' | 'pending' => {
-    if (status === 'approved' || status === 'active') {
-      return 'approved';
-    }
-    if (status === 'rejected' || status === 'dropout') {
-      return 'rejected';
-    }
+    if (status === 'approved' || status === 'active') return 'approved';
+    if (status === 'rejected' || status === 'dropout') return 'rejected';
     return 'pending';
   };
 
-  const filteredStartups = startups.filter(startup => {
-    const matchesSearch = startup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         startup.founder.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         startup.sector.toLowerCase().includes(searchTerm.toLowerCase());
-    // Normalize status for filtering - compare normalized statuses
+  const filteredStartups = startups.filter((startup) => {
+    const matchesSearch =
+      startup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      startup.founder.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      startup.sector.toLowerCase().includes(searchTerm.toLowerCase());
     const normalizedStatus = normalizeStatusForReview(startup.status);
     const matchesFilter = filterStatus === 'all' || normalizedStatus === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
-  const handleApprove = async (startupId: string) => {
-    setProcessingStartupId(startupId);
+  const goBackToList = () => navigate('/admin/review');
+
+  const handleApprove = async (id: string) => {
+    setProcessingStartupId(id);
     setProcessingAction('approve');
     try {
-      // Find the startup to get its details before approval
-      const startup = startups.find(s => s.id === startupId);
-      
-      // Update application status using context (this calls the backend API)
-      await approveApplication(startupId);
-      
-      // Create automatic alert for the approved startup
+      const startup = startups.find((s) => s.id === id);
+      await approveApplication(id);
       if (startup) {
-        createApplicationApprovalAlert(startup.name, 'Admin');
-        
-        // Create admin notification for application approval
-        createApplicationNotification(
-          startup.name,
-          startup.founder,
-          startup.sector
-        );
+        createApplicationNotification(startup.name, startup.founder, startup.sector);
       }
-      
       setMessage('Startup application approved successfully!');
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
-      
-      // Close detail view if open
-      if (selectedStartup?.id === startupId) {
-        setSelectedStartup(null);
-      }
-    } catch (error: any) {
-      setMessage(error.message || 'Failed to approve application. Please try again.');
+      if (routeStartupId === id) goBackToList();
+    } catch (error: unknown) {
+      setMessage(error instanceof Error ? error.message : 'Failed to approve application. Please try again.');
       setShowErrorMessage(true);
       setTimeout(() => setShowErrorMessage(false), 3000);
     } finally {
@@ -117,50 +353,31 @@ const Review: React.FC = () => {
     }
   };
 
-  const handleReject = async (startupId: string) => {
-    if (!window.confirm('Are you sure you want to reject this application?')) {
-      return;
-    }
-    
-    setProcessingStartupId(startupId);
+  const handleReject = async (id: string) => {
+    if (!window.confirm('Are you sure you want to reject this application?')) return;
+
+    setProcessingStartupId(id);
     setProcessingAction('reject');
     try {
-      // Update application status using context (this calls the backend API)
-      await rejectApplication(startupId);
-      
+      await rejectApplication(id);
       setMessage('Startup application rejected.');
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
-      
-      // Close detail view if open
-      if (selectedStartup?.id === startupId) {
-        setSelectedStartup(null);
-      }
-    } catch (error: any) {
-      setMessage(error.message || 'Failed to reject application. Please try again.');
+      if (routeStartupId === id) goBackToList();
+    } catch (error: unknown) {
+      setMessage(error instanceof Error ? error.message : 'Failed to reject application. Please try again.');
       setShowErrorMessage(true);
       setTimeout(() => setShowErrorMessage(false), 3000);
     } finally {
       setProcessingStartupId(null);
       setProcessingAction(null);
     }
-  };
-
-
-
-  const handleViewDocument = (docName: string) => {
-    // Simulate document viewing
-    setMessage(`Opening ${docName}...`);
-    setShowSuccessMessage(true);
-    setTimeout(() => setShowSuccessMessage(false), 2000);
   };
 
   const getTypeColor = (type: string) => {
     return type === 'incubation' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700';
   };
 
-  // Review page shows actual status from database: 'approved', 'rejected', or 'pending'
-  // This is different from other pages which normalize to 'active' or 'dropout'
   const getStatusColor = (status: string) => {
     const normalizedStatus = normalizeStatusForReview(status);
     switch (normalizedStatus) {
@@ -189,108 +406,163 @@ const Review: React.FC = () => {
     }
   };
 
-  if (selectedStartup) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => setSelectedStartup(null)}>
+  /* ——— Detail view (routed: /admin/review/:startupId) ——— */
+  if (routeStartupId) {
+    if (detailLoading && !detailStartup) {
+      return (
+        <Card className="p-12 text-center max-w-lg mx-auto">
+          <Loader2 className="h-10 w-10 animate-spin text-[var(--accent)] mx-auto mb-4" />
+          <p className="text-gray-600">Loading application…</p>
+        </Card>
+      );
+    }
+
+    if (detailError || !detailStartup) {
+      return (
+        <div className="space-y-6">
+          <Button variant="ghost" onClick={goBackToList}>
             ← Back to Review List
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Startup Profile Review</h1>
-            <p className="text-gray-600 mt-1">{selectedStartup.name}</p>
+          <Card className="p-8 text-center border-red-100">
+            <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
+            <p className="text-gray-800 font-medium">{detailError || 'Application not found.'}</p>
+          </Card>
+        </div>
+      );
+    }
+
+    const s = detailStartup;
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={goBackToList}>
+              ← Back to Review List
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Startup application</h1>
+              <p className="text-gray-600 mt-1">{s.name}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {getStatusIcon(s.status)}
+            <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(s.status)}`}>
+              {normalizeStatusForReview(s.status)}
+            </span>
+            <span className={`text-xs px-2 py-1 rounded-full capitalize ${getTypeColor(s.type)}`}>{s.type}</span>
           </div>
         </div>
 
-        <Card className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Info */}
-            <div className="lg:col-span-2 space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Startup Name</label>
-                    <p className="text-gray-900 font-medium">{selectedStartup.name}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Founder</label>
-                    <p className="text-gray-900 font-medium">{selectedStartup.founder}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Sector</label>
-                    <p className="text-gray-900 font-medium">{selectedStartup.sector}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Type</label>
-                    <span className={`text-xs px-2 py-1 rounded-full capitalize ${getTypeColor(selectedStartup.type)}`}>
-                      {selectedStartup.type}
-                    </span>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Status</label>
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(selectedStartup.status)}
-                      <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(selectedStartup.status)}`}>
-                        {normalizeStatusForReview(selectedStartup.status)}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Email</label>
-                    <p className="text-gray-900 font-medium">{selectedStartup.email}</p>
-                  </div>
-                </div>
-              </div>
+        {profileLoadNote && (
+          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">{profileLoadNote}</p>
+        )}
 
-            </div>
-
-            {/* Actions Sidebar */}
-            {normalizeStatusForReview(selectedStartup.status) === 'pending' && (
-              <div className="space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-6 items-start">
+          <div className="space-y-6 min-w-0">
+            <Card className="p-6 border border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Application summary</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Review Actions</h3>
-                  <div className="space-y-3">
-                    <Button 
-                      variant="primary" 
-                      className="w-full flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-                      onClick={() => handleApprove(selectedStartup.id)}
-                      disabled={processingStartupId === selectedStartup.id}
-                    >
-                      {processingStartupId === selectedStartup.id && processingAction === 'approve' ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Check className="h-4 w-4" />
-                      )}
-                      <span>Approve Application</span>
-                    </Button>
-                    
-                    <Button 
-                      variant="danger" 
-                      className="w-full flex items-center space-x-2 bg-red-600 hover:bg-red-700"
-                      onClick={() => handleReject(selectedStartup.id)}
-                      disabled={processingStartupId === selectedStartup.id}
-                    >
-                      {processingStartupId === selectedStartup.id && processingAction === 'reject' ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <X className="h-4 w-4" />
-                      )}
-                      <span>Reject Application</span>
-                    </Button>
-                  </div>
+                  <span className="text-gray-500">Startup</span>
+                  <p className="font-medium text-gray-900">{s.name}</p>
                 </div>
+                <div>
+                  <span className="text-gray-500">Founder (listing)</span>
+                  <p className="font-medium text-gray-900">{s.founder}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Sector</span>
+                  <p className="font-medium text-gray-900">{s.sector}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Contact email</span>
+                  <p className="font-medium text-gray-900 break-all">{s.email}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Submitted</span>
+                  <p className="font-medium text-gray-900 flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {s.submissionDate}
+                  </p>
+                </div>
+                {s.userId && (
+                  <div>
+                    <span className="text-gray-500">User ID</span>
+                    <p className="font-mono text-xs text-gray-800 break-all">{s.userId}</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {profile && (
+              <div className="space-y-3">
+                <h2 className="text-xl font-semibold text-gray-900">Founder profile submission</h2>
+                <ProfileSubmissionTabs profile={profile} />
               </div>
             )}
           </div>
-        </Card>
+
+          {normalizeStatusForReview(s.status) === 'pending' && (
+            <Card className="p-6 border border-gray-200 xl:sticky xl:top-6 space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Actions</h3>
+              <Button
+                variant="primary"
+                className="w-full flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700"
+                onClick={() => handleApprove(s.id)}
+                disabled={processingStartupId === s.id}
+              >
+                {processingStartupId === s.id && processingAction === 'approve' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                <span>Approve</span>
+              </Button>
+              <Button
+                variant="danger"
+                className="w-full flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700"
+                onClick={() => handleReject(s.id)}
+                disabled={processingStartupId === s.id}
+              >
+                {processingStartupId === s.id && processingAction === 'reject' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <X className="h-4 w-4" />
+                )}
+                <span>Reject</span>
+              </Button>
+            </Card>
+          )}
+        </div>
+
+        {showSuccessMessage && (
+          <div className="fixed top-4 right-4 z-50">
+            <Card className="p-4 bg-green-50 border-green-200">
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-green-700">{message}</span>
+              </div>
+            </Card>
+          </div>
+        )}
+        {showErrorMessage && (
+          <div className="fixed top-4 right-4 z-50">
+            <Card className="p-4 bg-red-50 border-red-200">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <span className="text-red-600">{message}</span>
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
     );
   }
 
+  /* ——— List view ——— */
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Application Review</h1>
@@ -308,7 +580,6 @@ const Review: React.FC = () => {
         </Button>
       </div>
 
-      {/* Search and Filter */}
       <Card className="p-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
@@ -339,7 +610,6 @@ const Review: React.FC = () => {
         </div>
       </Card>
 
-      {/* Background refresh indicator */}
       {isLoading && applications.length > 0 && (
         <div className="fixed top-20 right-4 z-50">
           <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded-lg border border-gray-300 shadow-lg">
@@ -349,7 +619,6 @@ const Review: React.FC = () => {
         </div>
       )}
 
-      {/* Applications Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredStartups.map((startup) => (
           <Card key={startup.id} className="p-6" hover>
@@ -371,9 +640,7 @@ const Review: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Type:</span>
-                  <span className={`text-xs px-2 py-1 rounded-full capitalize ${getTypeColor(startup.type)}`}>
-                    {startup.type}
-                  </span>
+                  <span className={`text-xs px-2 py-1 rounded-full capitalize ${getTypeColor(startup.type)}`}>{startup.type}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Status:</span>
@@ -394,19 +661,15 @@ const Review: React.FC = () => {
               </div>
 
               <div className="flex space-x-2 pt-4 border-t border-gray-300">
-                <Button 
-                  size="sm" 
-                  className="flex-1" 
-                  onClick={() => setSelectedStartup(startup)}
-                >
+                <Button size="sm" className="flex-1" onClick={() => navigate(`/admin/review/${startup.id}`)}>
                   <Eye className="h-4 w-4 mr-1" />
                   Review
                 </Button>
                 {normalizeStatusForReview(startup.status) === 'pending' && (
                   <>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleApprove(startup.id)}
                       className="text-green-600 hover:bg-green-50"
                       disabled={processingStartupId === startup.id}
@@ -417,9 +680,9 @@ const Review: React.FC = () => {
                         <Check className="h-4 w-4" />
                       )}
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleReject(startup.id)}
                       className="text-red-600 hover:bg-red-50"
                       disabled={processingStartupId === startup.id}
@@ -450,15 +713,13 @@ const Review: React.FC = () => {
           <Building2 className="h-12 w-12 text-gray-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-700 mb-2">No applications found</h3>
           <p className="text-gray-600">
-            {startups.length === 0 
-              ? "No startup applications yet. Applications will appear here when enterprise users sign up."
-              : "Try adjusting your search or filter criteria"
-            }
+            {startups.length === 0
+              ? 'No startup applications yet. Applications will appear here when enterprise users sign up.'
+              : 'Try adjusting your search or filter criteria'}
           </p>
         </Card>
       )}
 
-      {/* Success/Error Messages */}
       {showSuccessMessage && (
         <div className="fixed top-4 right-4 z-50">
           <Card className="p-4 bg-green-50 border-green-200">

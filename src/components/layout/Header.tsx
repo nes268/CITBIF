@@ -111,7 +111,6 @@ const Header: React.FC = () => {
     { path: '/admin/investors', label: 'Investor Manage' },
     { path: '/admin/startups', label: 'Startups' },
     { path: '/admin/data-room', label: 'Data Room' },
-    { path: '/admin/settings', label: 'Settings' },
   ];
 
   const navItems = user?.role === 'admin' ? adminNavItems : userNavItems;

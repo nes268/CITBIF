@@ -13,6 +13,7 @@ const DataRoom: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
 
@@ -87,6 +88,7 @@ const DataRoom: React.FC = () => {
     console.log('Uploading file with userId:', user.id, 'User object:', user);
 
     setIsUploading(true);
+    setUploadStatus(null);
 
     try {
       // Process each file
@@ -120,7 +122,7 @@ const DataRoom: React.FC = () => {
         await refreshDocuments();
       }
 
-      alert('Files uploaded successfully!');
+      setUploadStatus('Files uploaded successfully.');
     } catch (error: any) {
       console.error('Upload error:', error);
       const errorMessage = error?.message || 'Error uploading files. Please try again.';
@@ -147,7 +149,7 @@ const DataRoom: React.FC = () => {
         } else if (user?.role === 'admin') {
           await refreshDocuments();
         }
-        alert('Document deleted successfully!');
+        setUploadStatus('Document deleted successfully.');
       } catch (error) {
         console.error('Delete error:', error);
         alert('Error deleting document. Please try again.');
@@ -209,29 +211,36 @@ const DataRoom: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold text-[var(--text)]">Data Room</h1>
-          <p className="text-[var(--text-muted)] mt-1">Manage your startup documents and files</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <input
-            id="file-upload"
-            type="file"
-            multiple
-            accept=".pdf,.docx,.xlsx,.pptx,.txt,.jpg,.jpeg,.png"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-        <Button 
-          variant="primary" 
-          className="flex items-center space-x-2"
-            onClick={handleUploadClick}
-            disabled={isUploading}
-        >
-          <Upload className="h-4 w-4" />
-            <span>{isUploading ? 'Uploading...' : 'Upload File'}</span>
-        </Button>
+      <div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold text-[var(--text)]">Data Room</h1>
+            <p className="text-[var(--text-muted)] mt-1">Manage your startup documents and files</p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center space-x-2">
+              <input
+                id="file-upload"
+                type="file"
+                multiple
+                accept=".pdf,.docx,.xlsx,.pptx,.txt,.jpg,.jpeg,.png"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <Button 
+                variant="primary" 
+                className="flex items-center space-x-2"
+                onClick={handleUploadClick}
+                disabled={isUploading}
+              >
+                <Upload className="h-4 w-4" />
+                <span>{isUploading ? 'Uploading...' : 'Upload File'}</span>
+              </Button>
+            </div>
+            {uploadStatus && (
+              <p className="text-sm text-[var(--text-muted)] text-right max-w-xs">{uploadStatus}</p>
+            )}
+          </div>
         </div>
       </div>
 

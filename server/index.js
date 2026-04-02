@@ -161,7 +161,7 @@ const reportSchema = new mongoose.Schema({
 const userNotificationSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   message: { type: String, required: true },
-  type: { type: String, enum: ['approval', 'rejection', 'info', 'warning'], required: true },
+  type: { type: String, enum: ['approval', 'rejection', 'info', 'warning', 'event', 'mentor', 'investor'], required: true },
   read: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -252,6 +252,41 @@ const Profile = mongoose.model('Profile', profileSchema);
 const Startup = mongoose.model('Startup', startupSchema);
 const UserNotification = mongoose.model('UserNotification', userNotificationSchema);
 const AdminNotification = mongoose.model('AdminNotification', adminNotificationSchema);
+
+/** Notify every user linked to an approved/active startup (program participants). */
+async function notifyApprovedStartupUsers(message, notificationType) {
+  try {
+    const startups = await Startup.find({
+      userId: { $exists: true, $ne: null },
+      status: { $in: ['approved', 'active'] },
+    })
+      .select('userId')
+      .lean();
+
+    const seen = new Set();
+    const now = new Date();
+    const bulk = [];
+    for (const s of startups) {
+      if (!s.userId) continue;
+      const uid = s.userId.toString();
+      if (seen.has(uid)) continue;
+      seen.add(uid);
+      bulk.push({
+        userId: s.userId,
+        message,
+        type: notificationType,
+        read: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    if (bulk.length > 0) {
+      await UserNotification.insertMany(bulk);
+    }
+  } catch (err) {
+    console.error('notifyApprovedStartupUsers error:', err);
+  }
+}
 
 // Signup endpoint
 app.post('/api/auth/signup', async (req, res) => {
@@ -516,6 +551,11 @@ app.post('/api/mentors', async (req, res) => {
     });
 
     await newMentor.save();
+
+    await notifyApprovedStartupUsers(
+      `A new mentor joined the program: ${newMentor.name} (${newMentor.role}). Open Mentors to connect or request a session.`,
+      'mentor'
+    );
 
     res.status(201).json({
       id: newMentor._id.toString(),
@@ -913,6 +953,11 @@ app.post('/api/events', async (req, res) => {
 
     await newEvent.save();
 
+    await notifyApprovedStartupUsers(
+      `New program event: "${newEvent.title}" on ${newEvent.date} at ${newEvent.time}. Open Calendar for details and registration.`,
+      'event'
+    );
+
     res.status(201).json({
       id: newEvent._id.toString(),
       title: newEvent.title,
@@ -1218,6 +1263,11 @@ app.post('/api/investors', async (req, res) => {
     });
 
     await newInvestor.save();
+
+    await notifyApprovedStartupUsers(
+      `A new investor profile is available: ${newInvestor.name} (${newInvestor.firm}). Check Available Investors on your dashboard to request an intro.`,
+      'investor'
+    );
 
     res.status(201).json({
       id: newInvestor._id.toString(),
@@ -2222,6 +2272,12 @@ app.get('/api/startups/:id', async (req, res) => {
       return res.status(404).json({ error: 'Startup not found' });
     }
 
+    const resolvedUserId = startup.userId
+      ? typeof startup.userId === 'object' && startup.userId._id
+        ? startup.userId._id.toString()
+        : startup.userId.toString()
+      : null;
+
     res.status(200).json({
       id: startup._id.toString(),
       name: startup.name,
@@ -2231,7 +2287,7 @@ app.get('/api/startups/:id', async (req, res) => {
       status: startup.status,
       email: startup.email,
       submissionDate: startup.submissionDate,
-      userId: startup.userId ? startup.userId.toString() : null,
+      userId: resolvedUserId,
       startupPhase: startup.startupPhase || 'idea',
       createdAt: startup.createdAt.toISOString(),
       updatedAt: startup.updatedAt.toISOString()
@@ -2257,7 +2313,13 @@ app.get('/api/startups', async (req, res) => {
     }
     
     const startups = await Startup.find(query).populate('userId', 'fullName email').sort({ createdAt: -1 });
-    const startupsResponse = startups.map(startup => ({
+    const startupsResponse = startups.map(startup => {
+      const resolvedUserId = startup.userId
+        ? typeof startup.userId === 'object' && startup.userId._id
+          ? startup.userId._id.toString()
+          : startup.userId.toString()
+        : null;
+      return {
       id: startup._id.toString(),
       name: startup.name,
       founder: startup.founder,
@@ -2266,11 +2328,12 @@ app.get('/api/startups', async (req, res) => {
       status: startup.status,
       email: startup.email,
       submissionDate: startup.submissionDate,
-      userId: startup.userId ? startup.userId.toString() : null,
+      userId: resolvedUserId,
       startupPhase: startup.startupPhase || 'idea',
       createdAt: startup.createdAt.toISOString(),
       updatedAt: startup.updatedAt.toISOString()
-    }));
+    };
+    });
     res.status(200).json(startupsResponse);
   } catch (error) {
     console.error('Error fetching startups:', error);

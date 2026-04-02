@@ -270,13 +270,13 @@ function App() {
             }
           >
             <Route path="dashboard" element={<AdminOverview />} />
+            <Route path="review/:startupId" element={<AdminReview />} />
             <Route path="review" element={<AdminReview />} />
             <Route path="events" element={<AdminEvents />} />
             <Route path="mentors" element={<AdminMentors />} />
             <Route path="investors" element={<AdminInvestors />} />
             <Route path="startups" element={<AdminStartups />} />
             <Route path="data-room" element={<AdminDataRoom />} />
-            <Route path="settings" element={<Settings />} />
           </Route>
           
           {/* Redirect root to login */}
